@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sekar's Dashboard</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="clock"><b id="time">--:--</b><span id="date"></span></div>
+  <button class="wx" id="wxBtn" title="Weather" aria-label="Weather"><span class="wx-ic" id="wxIc"></span><b id="wxTemp">--°</b><span class="wx-meta"><small id="wxPlace">Set your city</small><small id="wxRange"></small></span></button>
+  <div class="zones" id="zones"></div>
+  <div class="voice" id="voiceBar">
+    <button class="mic" id="micBtn" title="Talk now (Ctrl+Alt+Space)" aria-label="Talk now" aria-describedby="voiceState"></button>
+    <div class="voice-text">
+      <small id="voiceState">Voice off</small>
+      <span id="voiceLine">Type or say a command</span>
+    </div>
+  </div>
+  <form class="ask" id="askForm" autocomplete="off">
+    <input id="askInput" placeholder="Ask or command… e.g. play lofi beats" aria-label="Command">
+  </form>
+  <button class="icon-btn" id="muteBtn" title="Mute spoken replies" aria-label="Mute spoken replies" aria-pressed="false"></button>
+  <button class="icon-btn" id="layoutBtn" title="Edit layout - move, resize, add or remove widgets" aria-label="Edit layout"></button>
+  <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings"></button>
+</header>
+
+<main class="grid" id="grid">
+  <section class="tile photos" data-tile="photos">
+    <div class="photo-stage" id="photoStage">
+      <div class="photo-bg" id="photoBg"></div>
+      <img class="photo a" id="photoA" alt="">
+      <img class="photo b" id="photoB" alt="">
+      <div class="photo-empty" id="photoEmpty">Looking for photos…</div>
+    </div>
+    <div class="tile-head over">
+      <h2>Photos</h2><span class="sub" id="photoSub"></span>
+      <div class="head-acts">
+        <button class="icon-btn sm" data-photo="prev" title="Previous photo" aria-label="Previous photo"></button>
+        <button class="icon-btn sm" data-photo="next" title="Next photo" aria-label="Next photo"></button>
+        <button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button>
+      </div>
+    </div>
+    <div class="photo-clock" id="photoClock"></div>
+  </section>
+
+  <section class="tile music" data-tile="music">
+    <div class="tile-head">
+      <h2>Music</h2><span class="sub" id="musicSub">YouTube</span>
+      <div class="head-acts"><button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button></div>
+    </div>
+    <div class="music-body">
+      <div class="video-wrap"><div id="ytPlayer"></div><div class="video-empty" id="videoEmpty">Say <b>"play …"</b> or search below</div></div>
+      <div class="music-side">
+        <div class="now"><b id="songTitle">Nothing playing</b><small id="songChannel"></small></div>
+        <div class="controls">
+          <button class="icon-btn" data-music="previous" title="Previous" aria-label="Previous"></button>
+          <button class="icon-btn big" data-music="toggle" id="playBtn" title="Play / pause" aria-label="Play or pause"></button>
+          <button class="icon-btn" data-music="next" title="Next" aria-label="Next"></button>
+          <input type="range" id="volume" min="0" max="100" value="60" aria-label="Volume">
+        </div>
+        <form class="search" id="musicForm" autocomplete="off"><input id="musicInput" placeholder="Search a song…" aria-label="Search a song"></form>
+        <ol class="queue" id="queue"></ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="tile stocks" data-tile="stocks">
+    <div class="tile-head">
+      <h2>Markets</h2><span class="sub" id="stocksSub"></span>
+      <div class="head-acts"><button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button></div>
+    </div>
+    <div class="stocks-body">
+      <ul class="quotes" id="quotes"></ul>
+      <div class="chart-panel" id="chartPanel">
+        <div class="chart-head"><div><b id="chartName"></b><span id="chartPrice"></span></div>
+          <div class="ranges" id="ranges"></div></div>
+        <div class="chart" id="chart"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tile cyber" data-tile="cyber">
+    <div class="tile-head">
+      <h2>Cyber threats</h2><span class="sub" id="cyberSub"></span>
+      <div class="head-acts">
+        <button class="btn sm" id="briefBtn">Brief me</button>
+        <button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button>
+      </div>
+    </div>
+    <div class="cyber-body">
+      <div class="news-col">
+        <div class="explain" id="explain-cyber" hidden></div>
+        <ul class="news" id="news"></ul>
+      </div>
+      <div class="kev-panel"><h3>Actively exploited (CISA KEV)</h3><ul class="kev" id="kev"></ul></div>
+    </div>
+  </section>
+
+  <section class="tile news-tile" data-tile="news">
+    <div class="tile-head">
+      <h2>News</h2><span class="sub" id="genSub"></span>
+      <div class="head-acts"><button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button></div>
+    </div>
+    <div class="cyber-body">
+      <div class="news-col">
+        <div class="explain" id="explain-news" hidden></div>
+        <ul class="news" id="genNews"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="tile whatsapp" data-tile="whatsapp">
+    <div class="wa-head">
+      <div class="wa-ic" aria-hidden="true"></div>
+      <div class="wa-text"><b>WhatsApp</b><small id="waStatus">Say "read my messages" · "open WhatsApp"</small></div>
+      <button class="btn sm" id="waBtn">Open</button>
+    </div>
+    <ul class="wa-chats" id="waChats"></ul>
+  </section>
+
+  <section class="tile log-tile" data-tile="assistant">
+    <div class="tile-head"><h2>Assistant</h2><span class="sub" id="aiSub"></span></div>
+    <ol class="log" id="log"></ol>
+  </section>
+
+  <section class="tile pc" data-tile="pc">
+    <div class="tile-head">
+      <h2>PC</h2><span class="sub" id="pcSub"></span>
+      <div class="head-acts"><button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button></div>
+    </div>
+    <div class="pc-body" id="pcBody"></div>
+  </section>
+
+  <section class="tile calendar" data-tile="calendar">
+    <div class="tile-head">
+      <h2>Calendar</h2><span class="sub" id="calSub"></span>
+      <div class="head-acts"><button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button></div>
+    </div>
+    <ol class="cal-list" id="calList"></ol>
+  </section>
+
+  <section class="tile timers" data-tile="timers">
+    <div class="tile-head">
+      <h2>Timers</h2><span class="sub">Say "set a timer for 10 minutes"</span>
+      <div class="head-acts"><button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button></div>
+    </div>
+    <ul class="timer-list" id="timerList"></ul>
+    <form class="timer-add" id="timerForm" autocomplete="off"><input id="timerInput" placeholder="e.g. 10 min tea · remind me at 6 pm to call Amma" aria-label="New timer or reminder"></form>
+  </section>
+
+  <section class="tile tasks" data-tile="tasks">
+    <div class="tile-head">
+      <h2>Tasks</h2><span class="sub" id="taskSub"></span>
+      <div class="head-acts"><button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button></div>
+    </div>
+    <ul class="task-list" id="taskList"></ul>
+    <form class="task-add" id="taskForm" autocomplete="off"><input id="taskInput" placeholder="e.g. pay bill by friday 6 pm" aria-label="New task"></form>
+  </section>
+
+  <section class="tile weather" data-tile="weather">
+    <div class="tile-head">
+      <h2>Weather</h2><span class="sub" id="wxSub"></span>
+      <div class="head-acts"><button class="icon-btn sm max-btn" title="Maximize" aria-label="Maximize"></button></div>
+    </div>
+    <div class="wx-body" id="wxBody"></div>
+  </section>
+</main>
+
+<div class="edit-bar" id="editBar" hidden>
+  <b>Edit layout</b><span>Drag a widget to move it, its blue corner to resize. ✕ removes it. Add:</span>
+  <div class="edit-add" id="editAdd"></div>
+  <button class="btn sm" id="editReset">Reset</button>
+  <button class="btn sm" id="editCancel">Cancel</button>
+  <button class="btn sm primary" id="editDone">Done</button>
+</div>
+
+<div class="alarm-banner" id="alarmBanner" role="alert" hidden></div>
+<dialog id="settings" class="settings"></dialog>
+<dialog id="studio" class="studio" aria-label="Widget Studio"></dialog>
+<div class="toasts" id="toasts"></div>
+
+<script src="app.js"></script>
+<script src="https://www.youtube.com/iframe_api" async></script>
+</body>
+</html>

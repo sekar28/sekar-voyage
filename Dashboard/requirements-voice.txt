@@ -1,0 +1,10 @@
+# Optional: "Hey Jarvis", speech-to-text and the timer bell. Without these the dashboard works by typing.
+numpy
+sounddevice
+openwakeword
+faster-whisper
+# Optional, only with an NVIDIA graphics card: runs local Whisper on the GPU (large download, NVIDIA licence).
+#   pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
+# Optional, NOT included: Piper, a natural-sounding voice for spoken replies. It is licensed GPL-3.0-or-later;
+# install it yourself if you want it (otherwise the Windows voice is used):
+#   pip install piper-tts

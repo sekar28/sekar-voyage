@@ -1,0 +1,9 @@
+pywebview==6.2.1
+anthropic==2.3.0
+pillow
+pillow-heif
+pystray
+icalendar
+recurring-ical-events
+# optional: better YouTube search without an API key
+# yt-dlp
