@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sekar's System Utilities</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app no-panel">
+
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><span></span><span></span><span></span></div>
+      <div><small class="brand-owner">Sekar's</small><b>System</b><small>Utilities</small></div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <span class="nav-pill"></span>
+      <button data-mode="home" class="active" data-icon="home"><span>Home</span></button>
+      <button data-mode="cleanup" data-icon="broom"><span>Clean-up</span><em id="quickNavSize"></em></button>
+      <button data-mode="organise" data-icon="grid"><span>Organiser</span><em id="orgNavBadge"></em></button>
+      <button data-mode="drivers" data-icon="chip"><span>Drivers</span><em id="drvNavBadge"></em></button>
+      <button data-mode="perf" data-icon="gauge"><span>Performance</span><em id="perfNavBadge"></em></button>
+    </nav>
+
+    <div class="section-title">Drives</div>
+    <div id="drives" class="drives">
+      <div class="drive skeleton"></div><div class="drive skeleton"></div>
+    </div>
+    <button id="scanFolderBtn" class="ghost-btn" data-icon="folderPlus"
+      title="Scan any folder instead of a whole drive. The same scan is used by both Clean-up and Organiser.">Scan a folder…</button>
+
+    <div class="spacer"></div>
+
+    <div class="ai-card">
+      <label class="ai-toggle">
+        <span data-icon="sparkle">AI assistant</span>
+        <input type="checkbox" id="aiToggle" checked><span class="switch"></span>
+      </label>
+      <div class="ai-card-head"><span class="dot" id="aiDot"></span><span id="aiStatus">Connecting to Ollama…</span></div>
+      <label class="select ai-only">
+        <select id="modelSelect" disabled><option>—</option></select>
+      </label>
+      <button class="ai-settings-btn" id="aiSettingsBtn" data-icon="gear"><span id="aiProvider">AI settings</span></button>
+      <button class="ai-settings-btn agent-btn" id="agentBtn" data-icon="mic"><span>Jarvis assistant</span><em id="agentBadge"></em></button>
+    </div>
+    <button id="themeBtn" class="theme-btn"><span class="theme-ic"></span><span id="themeLabel">Theme: Auto</span></button>
+  </aside>
+
+  <!-- ============ Main ============ -->
+  <main class="main">
+    <header class="topbar">
+      <button id="upBtn" class="icon-btn gone" title="Up (Backspace)" data-icon="back" disabled></button>
+      <nav id="crumbs" class="crumbs"><span class="crumb muted">No scan yet</span></nav>
+      <label class="search" data-icon="search"><input id="filter" placeholder="Filter this folder" autocomplete="off"></label>
+      <button id="changeFolderBtn" class="btn" data-icon="folderPlus" title="Pick a different folder or drive - used by both Clean-up and Organiser">Scan another folder</button>
+      <button id="revealBtn" class="btn" data-icon="explorer" disabled>Open in Explorer</button>
+    </header>
+
+    <section id="view-home" class="view">
+      <div class="home">
+        <div class="card home-hero">
+          <div class="home-greet">
+            <small id="homeDate"></small>
+            <h1 id="homeHello">Hello</h1>
+            <p id="homeSys">Reading your PC…</p>
+            <div class="home-headline">
+              <div><b id="homeFree">0 B</b><span>can be freed right now, safely</span></div>
+              <button class="btn clean" data-go="quick" data-icon="broom">Clean now</button>
+            </div>
+          </div>
+          <div class="home-specs" id="homeSpecs">
+            <i class="shimmer"></i><i class="shimmer"></i><i class="shimmer"></i><i class="shimmer"></i><i class="shimmer"></i><i class="shimmer"></i>
+          </div>
+          <div class="home-drives" id="homeDrives"></div>
+        </div>
+
+        <div class="home-grid">
+          <div class="card hcard" style="--c:var(--safe);--i:0">
+            <div class="hcard-head"><span class="hcard-ic" data-icon="broom"></span><div><b>Clean-up</b><small>Always-safe junk on this PC</small></div></div>
+            <div class="hcard-big"><b id="hcCleanBig">—</b><small id="hcCleanSub">measuring…</small></div>
+            <div class="hcard-list" id="hcCleanList"></div>
+            <div class="hcard-extra" id="hcCleanExtra"></div>
+            <button class="btn hcard-btn" data-go="quick">Open Quick clean</button>
+          </div>
+          <div class="card hcard" style="--c:var(--accent);--i:1">
+            <div class="hcard-head"><span class="hcard-ic" data-icon="grid"></span><div><b>Organiser</b><small>Loose files in your main folders</small></div></div>
+            <div class="hcard-big"><b id="hcOrgBig">—</b><small id="hcOrgSub">looking…</small></div>
+            <div class="hcard-list" id="hcOrgList"></div>
+            <div class="hcard-extra" id="hcOrgExtra"></div>
+            <button class="btn hcard-btn" id="hcOrgBtn" data-go="welcome">Open Organiser</button>
+          </div>
+          <div class="card hcard" style="--c:var(--accent2);--i:2">
+            <div class="hcard-head"><span class="hcard-ic" data-icon="chip"></span><div><b>Drivers</b><small>Versions and Windows Update</small></div></div>
+            <div class="hcard-big"><b id="hcDrvBig">—</b><small id="hcDrvSub">reading drivers…</small></div>
+            <div class="hcard-list" id="hcDrvList"></div>
+            <div class="hcard-extra" id="hcDrvExtra"></div>
+            <button class="btn hcard-btn" data-go="drivers">Open Drivers</button>
+          </div>
+          <div class="card hcard" style="--c:var(--review);--i:3">
+            <div class="hcard-head"><span class="hcard-ic" data-icon="gauge"></span><div><b>Performance</b><small>Memory, CPU and background apps</small></div></div>
+            <div class="hcard-big"><b id="hcPerfBig">—</b><small id="hcPerfSub">checking…</small></div>
+            <div class="hcard-list" id="hcPerfList"></div>
+            <div class="hcard-extra" id="hcPerfExtra"></div>
+            <button class="btn hcard-btn" data-go="perf">Open Performance</button>
+          </div>
+        </div>
+        <div class="home-foot" id="homeAi"></div>
+      </div>
+    </section>
+
+    <section id="view-drivers" class="view"><div class="drv" id="drvBody"></div></section>
+    <section id="view-perf" class="view"><div class="drv perf" id="perfBody"></div></section>
+
+    <section id="view-quick" class="view">
+      <div class="card qc-hero">
+        <div class="qc-ring">
+          <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="qc-ring-bg"/>
+            <circle cx="60" cy="60" r="50" class="qc-ring-fg" pathLength="100"/></svg>
+          <div class="qc-ring-val"><b id="qcTotal">0 B</b><small>can be freed</small></div>
+        </div>
+        <div class="qc-head">
+          <h1>Quick clean</h1>
+          <p>Places where Windows and your apps pile up throwaway files. Cleaning them never touches your
+             documents, photos or programs.</p>
+          <div class="qc-actions">
+            <button id="qcCleanBtn" class="btn clean big" data-icon="broom" disabled>Clean selected · <b id="qcSel">0 B</b></button>
+            <button id="qcRecheck" class="btn" data-icon="refresh">Re-check</button>
+          </div>
+        </div>
+      </div>
+      <div id="qcAdmin" class="callout info hidden"><span>Some locations need administrator rights to measure and clean.</span>
+        <button class="link" id="adminBtn">Restart as administrator</button></div>
+      <div class="qc-list" id="qcList"></div>
+      <p class="qc-foot">Want the full picture? Pick a drive on the left to scan every folder.</p>
+    </section>
+
+    <section id="view-welcome" class="view">
+      <div class="org-start">
+        <div class="org-start-head">
+          <div class="hero-rings small"><i></i><i></i><i></i><b></b></div>
+          <div>
+            <h1>Which folder should we tidy?</h1>
+            <p>Pick one of your folders below, or choose any other folder. The app scans it, gives it a health check
+               and suggests a better structure — which it can then apply for you (with undo).</p>
+            <div class="hero-tips">
+              <div><b>1</b>Pick a folder</div><div><b>2</b>Review the plan</div><div><b>3</b>Organise for me</div>
+            </div>
+          </div>
+        </div>
+        <div class="org-picks" id="orgPicks"></div>
+        <button id="orgPickBtn" class="btn primary big" data-icon="folderPlus">Choose another folder…</button>
+      </div>
+    </section>
+
+    <section id="view-scanning" class="view">
+      <div class="scan-card">
+        <div class="scan-orb"><svg viewBox="0 0 120 120"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent2)"/></linearGradient></defs>
+          <circle cx="60" cy="60" r="50" class="orb-track"/><circle cx="60" cy="60" r="50" class="orb-spin"/></svg>
+          <div class="orb-center"><b id="scanFiles">0</b><small>files</small></div>
+        </div>
+        <h2 id="scanTitle">Scanning…</h2>
+        <div class="scan-stats"><span><b id="scanDirs">0</b> folders</span><span><b id="scanTime">0s</b> elapsed</span></div>
+        <div class="scan-path" id="scanPath">&nbsp;</div>
+        <button id="cancelBtn" class="btn">Cancel</button>
+      </div>
+      <div class="shimmer-list"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </section>
+
+    <section id="view-explorer" class="view">
+      <div class="stats-row" id="stats"></div>
+      <div class="explorer-body">
+        <div class="card chart-card">
+          <div class="chart-wrap">
+            <svg id="sunburst" viewBox="-150 -150 300 300"></svg>
+            <div class="chart-center" id="chartCenter"></div>
+            <div class="tip" id="tip"></div>
+          </div>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="card list-card">
+          <div class="tabs" id="tabs">
+            <button data-tab="browse" class="active">Contents</button>
+            <button data-tab="largest">Largest files</button>
+            <span class="tab-ink"></span>
+          </div>
+          <div class="list-head" id="listHead"></div>
+          <div class="list" id="list" tabindex="0"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ Mode panel ============ -->
+  <aside class="panel">
+    <div id="panel-cleanup" class="mode-panel active">
+      <div class="panel-head">
+        <h2>Clean-up <button class="chip-btn" data-go="quick" data-icon="zap">Quick clean</button></h2>
+        <p>Rules find known space wasters; your local AI explains the rest. Everything asks before it deletes.</p>
+      </div>
+      <div class="panel-actions">
+        <button id="findBtn" class="btn primary" data-icon="search">Find clean-up candidates</button>
+        <button id="reviewBtn" class="btn ai ai-only" data-icon="sparkle">AI review</button>
+      </div>
+      <button class="tool-tile vd-btn" style="--tc:var(--review)">
+        <span class="tool-ic" data-icon="copy"></span>
+        <span class="tool-txt"><b>Find duplicate versions</b><small data-idle="name(1), name(2)… compared by content in this folder">name(1), name(2)… compared by content in this folder</small></span>
+        <span class="tool-go" data-icon="chevron"></span>
+      </button>
+      <div class="tiles">
+        <div class="tile safe"><small>Safe to free</small><b id="tSafe">—</b></div>
+        <div class="tile review"><small>Worth reviewing</small><b id="tReview">—</b></div>
+        <div class="tile keep"><small>Keep / special</small><b id="tKeep">—</b></div>
+      </div>
+      <div id="cats" class="cats">
+        <div class="empty-state" data-icon="broom">Scan a drive, then find clean-up candidates.</div>
+      </div>
+    </div>
+
+    <div id="panel-organise" class="mode-panel">
+      <div class="panel-head">
+        <h2>Organiser <button class="chip-btn" data-go="welcome" data-icon="folderPlus">Pick a folder</button></h2>
+        <p id="orgFolder">Pick a folder in the middle of the screen to get started.</p>
+      </div>
+      <div class="panel-actions">
+        <button id="analyseBtn" class="btn primary" data-icon="search">Analyse folder</button>
+        <button id="planBtn" class="btn ai" data-icon="sparkle"><span id="planLabel">AI plan</span></button>
+      </div>
+      <div class="tool-tiles">
+        <button class="tool-tile" id="clsBtn" style="--tc:var(--accent)">
+          <span class="tool-ic" data-icon="files"></span>
+          <span class="tool-txt"><b>Deep analyse &amp; classify</b><small data-idle="Sort documents into bills, KYC, bank &amp; tax… — you review before anything moves">Sort documents into bills, KYC, bank &amp; tax… — you review before anything moves</small></span>
+          <span class="tool-go" data-icon="chevron"></span>
+        </button>
+        <button class="tool-tile vd-btn" style="--tc:var(--review)">
+          <span class="tool-ic" data-icon="copy"></span>
+          <span class="tool-txt"><b>Find duplicate versions</b><small data-idle="name(1), name(2)… compared by content in this folder">name(1), name(2)… compared by content in this folder</small></span>
+          <span class="tool-go" data-icon="chevron"></span>
+        </button>
+      </div>
+      <div id="orgBody" class="org-body">
+        <div class="empty-state" data-icon="grid">Pick a folder in the middle of the screen (Downloads, Documents…) or
+          choose any folder. Its health check and plan appear here.</div>
+      </div>
+    </div>
+
+    <div class="drawer" id="drawer"><div class="drawer-inner" id="drawerInner"></div></div>
+  </aside>
+</div>
+
+<aside class="agent-panel" id="agentPanel" aria-label="Jarvis assistant">
+  <header class="agent-head">
+    <span class="agent-orb" id="agentOrb"></span>
+    <div><b>Jarvis</b><small id="agentStatus">Say "Hey Jarvis", or type below</small></div>
+    <button class="icon-btn" id="agentClose" title="Close" data-icon="x"></button>
+  </header>
+  <div class="agent-opts">
+    <label class="ai-toggle"><span>Watch my PC in the background</span><input type="checkbox" id="agentMonitor"><span class="switch"></span></label>
+    <label class="ai-toggle"><span>Start with Windows (in the tray)</span><input type="checkbox" id="agentStartup"><span class="switch"></span></label>
+    <label class="agent-voice-row"><span>Voice</span>
+      <select id="agentVoiceMode"><option value="wake">Listen for "Hey Jarvis" when Sekar's Dashboard is closed</option>
+        <option value="ptt">Push-to-talk only (mic button / Ctrl+Alt+J)</option><option value="off">Off</option></select></label>
+    <label class="ai-toggle"><span>Speak replies and alerts</span><input type="checkbox" id="agentSpeak"><span class="switch"></span></label>
+    <small class="agent-voice-state" id="agentVoiceState"></small>
+    <button class="chip-btn" id="agentLearnedBtn" data-icon="sparkle">What Jarvis has learned</button>
+  </div>
+  <div class="agent-log" id="agentLog"></div>
+  <div class="agent-pending" id="agentPending" hidden></div>
+  <form class="agent-input" id="agentForm">
+    <button type="button" class="btn agent-mic" id="agentMic" data-icon="mic" title="Talk to Jarvis (Ctrl+Alt+J)"></button>
+    <input id="agentText" placeholder="e.g. what can I delete in Downloads?" autocomplete="off">
+    <button class="btn clean" data-icon="arrow" title="Send"></button>
+  </form>
+</aside>
+
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <div class="modal-ic" id="modalIc"></div>
+    <h3 id="modalTitle"></h3>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions"><button class="btn" id="modalCancel">Cancel</button><button class="btn clean" id="modalOk">OK</button></div>
+  </div>
+</div>
+<div class="ctxmenu" id="ctx"></div>
+<div class="toasts" id="toasts"></div>
+<script src="app.js"></script>
+</body>
+</html>

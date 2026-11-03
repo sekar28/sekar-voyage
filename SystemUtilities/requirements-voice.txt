@@ -1,0 +1,8 @@
+# Optional: the Jarvis voice (wake word, speech-to-text). Without these the assistant still works by typing.
+numpy==2.5.4
+sounddevice==0.5.6
+openwakeword==0.6.0
+faster-whisper==1.2.1
+# Optional, NOT included in releases: Piper, a natural-sounding voice for spoken replies.
+# It is licensed GPL-3.0-or-later; install it yourself if you want it (otherwise the Windows voice is used):
+#   pip install piper-tts==1.8.0

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+!packaging/SystemUtilities.spec
+packaging/Output/
+
+# Personal data - lives in %LOCALAPPDATA%\StorageAnalyzer on each PC, never in the repo
+settings.json
+content_cache.json
+agent.json
+memory.db*
+last_request.wav
+undo/
+agent/
+
+# Downloaded models and the optional GPL voice engine - fetched on first use, never committed
+*.onnx
+*.onnx.json
+*.tflite
+voices/
+piper/

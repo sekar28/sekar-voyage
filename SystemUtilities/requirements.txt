@@ -1,0 +1,5 @@
+pywebview==6.2.1
+anthropic==2.3.0
+pypdf==6.21.2
+pystray==0.19.5
+Pillow==13.0.0
