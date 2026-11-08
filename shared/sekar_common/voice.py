@@ -7,10 +7,12 @@ no internet, or the service is busy. With wake=False only push-to-talk starts a 
 is the one listening for the wake word)."""
 
 import base64
+import contextlib
 import ctypes
 import io
 import json
 import os
+import sys
 import threading
 import time
 import urllib.error
@@ -27,6 +29,18 @@ DEFAULT_PAUSE = 1.6          # seconds of quiet that end a request (setting: stt
 NO_SPEECH_GIVE_UP = 6.0      # after the wake word, how long to wait for you to start talking
 MAX_RECORD = 25.0
 MIN_THRESHOLD = 60.0         # RMS level counted as speech, at least (a headset mic idles around 10); raised in noisy rooms
+@contextlib.contextmanager
+def _console_for_downloads():
+    """Model downloads draw progress bars on stderr. Under pythonw or the installed app there is no console
+    (sys.stderr is None) and the bar crashes the download, so give it somewhere harmless to write."""
+    if sys.stderr is not None and sys.stdout is not None:
+        yield
+        return
+    with open(os.devnull, "w") as quiet, contextlib.redirect_stderr(sys.stderr or quiet), \
+            contextlib.redirect_stdout(sys.stdout or quiet):
+        yield
+
+
 WAKE_WORDS = {"hey_jarvis": "Hey Jarvis", "alexa": "Alexa", "hey_mycroft": "Hey Mycroft", "hey_rhasspy": "Hey Rhasspy"}
 GEMINI_MODEL = "gemini-flash-lite-latest"
 STT_PRESETS = [
@@ -146,7 +160,7 @@ class LocalWhisper:
         return f"{self.size} on {'GPU' if self.device == 'cuda' else 'CPU'}" + (f" ({self.note})" if self.note else "")
 
     def load(self):
-        with self._lock:
+        with self._lock, _console_for_downloads():
             if self._model is not None:
                 return
             import numpy as np
@@ -266,7 +280,8 @@ class VoiceLoop(threading.Thread):
                 from openwakeword import utils as oww_utils
                 from openwakeword.model import Model
                 try:
-                    oww_utils.download_models(model_names=[word])
+                    with _console_for_downloads():
+                        oww_utils.download_models(model_names=[word])
                 except Exception:
                     pass                  # already downloaded, or offline with a cached copy
                 model = Model(wakeword_models=[word], inference_framework="onnx")

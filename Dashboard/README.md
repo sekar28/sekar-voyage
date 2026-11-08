@@ -27,13 +27,40 @@ AI is optional: a local model (Ollama), your own cloud key (Google Gemini, OpenA
 | **Agenda** | Your calendars (ICS links), or a plain calendar if none is linked |
 | **WhatsApp** | WhatsApp Web inside the dashboard, linked by QR code |
 | **PC monitor** | CPU, memory, GPU and disk at a glance |
+| **Network** (optional) | Devices on your network and alerts, from *Sekar's Network Watch* (a separate app, not yet released). Add it with **Edit layout** |
 | **Assistant** | What Jarvis heard and answered |
 
 Plus **Widget Studio**: describe a widget in plain words and the AI builds it for you.
 
 ## Install
 
-There is no installer for the dashboard yet; run it from source.
+### With the installer (recommended)
+
+No Python needed: the installer contains everything, including voice ("Hey Jarvis", cloud and local
+speech-to-text on the processor).
+
+1. Open the [Dashboard release](https://github.com/sekar28/sekar-voyage/releases/tag/dashboard-v1.0.0) and download
+   into **one folder**: `Dashboard-Setup-1.0.0.exe`, `SekarsVoyage-CodeSigning.cer` and `Trust-Certificate.ps1`.
+2. **Check the download** (recommended): `Get-FileHash .\Dashboard-Setup-1.0.0.exe` in PowerShell must print the
+   SHA-256 shown on the release page.
+3. **Trust the publisher** (once per PC, optional; the same certificate as System Utilities): right-click
+   `Trust-Certificate.ps1` → **Run with PowerShell**, then click **Yes** in the Windows warning.
+4. **Run the installer.** If SmartScreen says *"Windows protected your PC"*, click **More info → Run anyway** (the
+   certificate is self-made, so Microsoft doesn't know it yet). It installs for your user only, without
+   administrator rights, and opens the dashboard in a window the first time.
+5. Start it later from the Start menu. It opens full screen on your second monitor.
+
+Not included in the installer: Piper (the natural voice, GPL-3.0; the Windows voice is used instead) and the
+NVIDIA libraries for local speech-to-text on a graphics card. Both are available when you run from source. The
+wake-word models (about 10 MB) download the first time voice starts.
+
+> **Antivirus note:** Python apps packed into an .exe are sometimes flagged by machine-learning detections such as
+> `Trojan:Win32/Bearfoos.A!ml`. Compare the SHA-256 with the release page. If it matches, it's a false positive;
+> please report it at <https://www.microsoft.com/wdsi/filesubmission>.
+
+### From source
+
+For developers, or for Piper and GPU speech-to-text.
 
 **Needs:** Windows 10/11 (64-bit), [Python 3.12](https://www.python.org/downloads/) (tick *Add python.exe to PATH*),
 Microsoft Edge WebView2 (already part of Windows 10/11). A second monitor is recommended but not required.
@@ -63,6 +90,11 @@ Microsoft Edge WebView2 (already part of Windows 10/11). A second monitor is rec
 4. Optional, a natural-sounding voice for replies (Piper, GPL-3.0, not included; without it the Windows voice is
    used): `pip install piper-tts`
 5. Start it: double-click `Run Dashboard.bat`, or run `pythonw app.py`.
+
+To build the installer yourself: `packaging\build.ps1 -Version 1.0.0` (needs PyInstaller, Inno Setup 6 and both
+requirements files installed). It bundles the app, runs `tools\check_release.py` (fails if personal data or
+downloaded wake-word models would ship), signs it with a self-signed certificate from your Windows user store,
+and writes everything to `packaging\Output\`.
 
 Command-line options: `--window` (a normal window instead of full screen), `--debug` (with browser dev tools),
 `--serve` (developer mode: the UI in a browser at http://127.0.0.1:8770/?serve=1).
@@ -156,7 +188,8 @@ Then you can add, complete or snooze tasks by message and get a daily digest. Wi
 
 | Problem | Try |
 |---|---|
-| "Voice needs: pip install …" in the top bar | `pip install -r requirements-voice.txt`, then restart. |
+| "Voice needs: pip install …" in the top bar | From source: `pip install -r requirements-voice.txt`, then restart. (The installer already includes voice.) |
+| "Wake word model failed to load" | The model downloads on first use: check the internet connection, then restart the dashboard. |
 | "Hey Jarvis" isn't heard | Check the mic in Windows sound settings; quiet headset mics may need a higher input level. Use the mic button meanwhile. |
 | The dashboard disappeared | Press **Ctrl+Alt+D** or click the tray icon. Starting it again also brings it back. |
 | It opens on the wrong screen | **Settings → Show the dashboard on**, or start with `--window`. |

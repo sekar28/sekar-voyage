@@ -16,6 +16,7 @@ AGENT_JSON = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser(r"~\
                           "StorageAnalyzer", "agent.json")
 APP_PY = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "StorageAnalyzer", "app.py")
 APP_NAME = "Sekar's System Utilities"
+SETUP_ID = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{6F3C2A51-8B7E-4C0D-9A61-5E2B7D4F1C90}_is1"
 START_WAIT = 20                              # seconds to wait for a freshly started Sekar's System Utilities
 ASK_TIMEOUT = 75
 POLL_EVERY = 5
@@ -28,8 +29,30 @@ class AgentError(RuntimeError):
     pass
 
 
+def _installed_exe():
+    """SystemUtilities.exe from its installer's uninstall entry (per-user first, then all users), or None."""
+    import winreg
+    for root in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+        try:
+            with winreg.OpenKey(root, SETUP_ID) as k:
+                exe = os.path.join(winreg.QueryValueEx(k, "InstallLocation")[0], "SystemUtilities.exe")
+        except OSError:
+            continue
+        if os.path.isfile(exe):
+            return exe
+    return None
+
+
+def _start_command():
+    """How to start it in the tray: the source copy next to this folder, else the installed app."""
+    if os.path.isfile(APP_PY):
+        return [_pythonw(), APP_PY, "--tray"], os.path.dirname(APP_PY)
+    exe = _installed_exe()
+    return ([exe, "--tray"], os.path.dirname(exe)) if exe else (None, None)
+
+
 def installed():
-    return os.path.isfile(APP_PY) or os.path.isfile(AGENT_JSON)
+    return os.path.isfile(APP_PY) or os.path.isfile(AGENT_JSON) or bool(_installed_exe())
 
 
 def _conn():
@@ -66,12 +89,12 @@ def ensure_running(on_starting=None):
     with _start_lock:
         if ping():                            # another request started it meanwhile
             return
-        if not os.path.isfile(APP_PY):
+        cmd, cwd = _start_command()
+        if not cmd:
             raise AgentError("Sekar's System Utilities isn't running and I can't find it to start it.")
         if on_starting:
             on_starting()
-        subprocess.Popen(["cmd", "/c", "start", "", _pythonw(), APP_PY, "--tray"],
-                         cwd=os.path.dirname(APP_PY), creationflags=subprocess.CREATE_NO_WINDOW)
+        subprocess.Popen(["cmd", "/c", "start", ""] + cmd, cwd=cwd, creationflags=subprocess.CREATE_NO_WINDOW)
         deadline = time.time() + START_WAIT
         while time.time() < deadline:
             time.sleep(0.5)

@@ -29,6 +29,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import alarm
 import assistant
+import netwatch_client
 import pcagent
 import secrets_store
 import telegram_link
@@ -112,7 +113,7 @@ WIDGETS = {   # id: (name, min w, min h)
     "photos": ("Photos", 2, 2), "music": ("Music", 3, 3), "stocks": ("Markets", 3, 2), "cyber": ("Cyber threats", 3, 2),
     "whatsapp": ("WhatsApp", 2, 2), "assistant": ("Assistant", 2, 2), "weather": ("Weather", 3, 2),
     "pc": ("PC monitor", 2, 2), "calendar": ("Calendar", 2, 2), "timers": ("Timers", 2, 2), "news": ("News", 3, 2),
-    "tasks": ("Tasks", 2, 2),
+    "tasks": ("Tasks", 2, 2), "network": ("Network", 2, 2),
 }
 
 
@@ -684,6 +685,15 @@ class Api:
     @safe
     def pc_stats(self):
         return pcmon.snapshot()
+
+    @safe
+    def net_status(self):
+        """Network tile: display only - all the watching is done by Sekar's Network Watch."""
+        return netwatch_client.summary()
+
+    @safe
+    def net_open(self, view=""):
+        return netwatch_client.open_app(view)
 
     def _calendars(self):
         try:

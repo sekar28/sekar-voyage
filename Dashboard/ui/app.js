@@ -111,7 +111,7 @@ function maximize(tile) {
   $$('.max-btn').forEach(b => { b.innerHTML = icon(b.closest('.tile').classList.contains('max') ? 'min' : 'max'); });
   if (tile === 'stocks') Stocks.drawChart();
   if (tile === 'weather') Weather.renderFull();
-  if (!Layout.shown(tile)) ({ news: () => GenNews.load(), pc: () => PC.load(), calendar: () => Cal.load() }[tile] || (() => {}))();
+  if (!Layout.shown(tile)) ({ news: () => GenNews.load(), pc: () => PC.load(), network: () => Net.load(), calendar: () => Cal.load() }[tile] || (() => {}))();
   reportState();
 }
 function restore() {
@@ -465,6 +465,43 @@ const PC = {
   },
 };
 
+/* ================================================================ Network (display only - data from Sekar's Network Watch) */
+const Net = {
+  async load() {
+    if (!Layout.visible('network')) return;
+    let s;
+    try { s = await Bridge.call('net_status'); } catch (e) { $('#netSub').textContent = e.message; return; }
+    const body = $('#netBody');
+    if (!s.running) {
+      $('#netSub').textContent = 'not running';
+      body.innerHTML = `<div class="net-off"><p>${s.installed ? "Sekar's Network Watch isn't running." : "This tile needs Sekar's Network Watch installed and running."}</p>
+        ${s.installed ? '<button class="btn sm" data-net-open="">Start Network Watch</button>' : ''}</div>`;
+      return;
+    }
+    if (!s.connected) { $('#netSub').textContent = 'offline'; body.innerHTML = '<div class="net-off"><p>Not connected to a network.</p></div>'; return; }
+    const n = s.network, c = s.counts;
+    const mbit = b => { const v = b * 8 / 1e6; return v >= 10 ? v.toFixed(0) : v.toFixed(v >= 1 ? 1 : 2); };
+    $('#netSub').textContent = n.label || n.ssid || n.gateway;
+    const unk = s.unapproved.slice(0, 4).map(d => `<li class="warn"><b>! ${esc(d.name)}</b><small>${esc(d.ip)} · ${esc(d.mac)}</small></li>`).join('');
+    const mons = s.monitors.map(m => `<li class="${m.down ? 'bad' : ''}"><span>${m.down ? '✕' : m.ok ? '●' : '…'} ${esc(m.name)}</span><small>${m.down ? 'down' : m.ok ? (m.ms ?? 0) + ' ms' : 'checking'}</small></li>`).join('');
+    body.innerHTML = `
+      <div class="net-stats">
+        <div><b>${c.online}</b><small>online</small></div>
+        <div class="${c.unapproved ? 'warn' : ''}"><b>${c.unapproved}</b><small>${c.unapproved ? '! to approve' : 'to approve'}</small></div>
+        <div><b>${mbit(s.traffic.rx)}</b><small>↓ Mbit/s</small></div>
+        <div><b>${mbit(s.traffic.tx)}</b><small>↑ Mbit/s</small></div>
+      </div>
+      ${unk ? `<h3>Not approved</h3><ul class="net-list">${unk}</ul>${s.unapproved.length > 4 ? `<small class="net-more">+${s.unapproved.length - 4} more</small>` : ''}` : ''}
+      ${mons ? `<h3>Monitors</h3><ul class="net-list mons">${mons}</ul>` : ''}
+      ${s.alerts.length ? `<h3>Latest</h3><ul class="net-list">${s.alerts.slice(0, 3).map(a => `<li><span>${esc(a.text)}</span><small>${ago(a.ts)}</small></li>`).join('')}</ul>` : ''}
+      ${c.unapproved ? '<button class="btn sm" data-net-open="devices">Review devices</button>' : ''}`;
+  },
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-net-open], #netOpen'); if (!b) return;
+  Bridge.call('net_open', b.dataset.netOpen || '').then(() => setTimeout(() => Net.load(), 4000)).catch(err => toast(err.message, 'error'));
+});
+
 /* ================================================================ Calendar */
 const Cal = {
   data: null, offset: 0,                // months away from the current one (‹ › buttons)
@@ -627,7 +664,7 @@ const Layout = {
   },
   refreshData() {
     // Widgets that were just added get their data now instead of at their next poll.
-    GenNews.load(); PC.load(); Cal.load(); Weather.load(); Stocks.load();
+    GenNews.load(); PC.load(); Net.load(); Cal.load(); Weather.load(); Stocks.load();
     if (Layout.shown('timers')) Bridge.call('timers_list').then(t => Timers.set(t)).catch(() => {});
     if (Layout.shown('tasks')) Bridge.call('tasks_list').then(t => Tasks.set(t)).catch(() => {});
   },
@@ -1674,6 +1711,7 @@ async function start() {
   setInterval(() => Cal.load(), 15 * 60_000);
   setInterval(() => { Cal.render(); }, 60_000);       // move the "now" / "next" markers
   setInterval(() => PC.load(), 3_000);
+  setInterval(() => Net.load(), 10_000);
   setInterval(() => Timers.tick(), 1_000);
   setInterval(idleCheck, 30_000);
 }

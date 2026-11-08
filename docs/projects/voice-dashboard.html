@@ -62,7 +62,7 @@
             <div><dt>AI</dt><dd>A local model on your PC, or your own cloud key</dd></div>
             <div><dt>Control</dt><dd>Voice with a wake word you can retrain, or typing</dd></div>
             <div><dt>Phone</dt><dd>Optional Telegram bot for task alerts and commands</dd></div>
-            <div><dt>Status</dt><dd>Run it from source. There is no installer yet</dd></div>
+            <div><dt>Version</dt><dd>1.0.0, a Windows installer with voice included (8 November 2026)</dd></div>
             <div><dt>Tiles</dt><dd>Clock, weather, news, markets, music, timers, tasks, PC stats, calendar, WhatsApp, cyber threats</dd></div>
           </dl>
           <a class="callout" href="#telegram" data-reveal>
@@ -180,15 +180,16 @@
 
         <div class="article-footer" data-reveal>
           <h2>Get it</h2>
-          <p>The dashboard is free and open source under the MIT licence. There is no installer yet, so you run it from the source code. You need Windows 10 or 11, Python 3.12, and a second monitor is recommended.</p>
+          <p>The dashboard is free and open source under the MIT licence, for Windows 10 and 11, and a second monitor is recommended. Version 1.0.0 is a normal Windows installer of about 100 MB with the voice included: the &ldquo;Hey Jarvis&rdquo; wake word and speech-to-text work out of the box. You do not need Python. It installs for your own account, without administrator rights.</p>
           <ol class="steps">
-            <li>Download the code from <a href="https://github.com/sekar28/sekar-voyage" rel="noopener">GitHub</a> (<em>Code</em>, then <em>Download ZIP</em>) and unzip it. Keep the folder structure: the dashboard loads shared code from the folder next to it.</li>
-            <li>In a terminal, go to the <code>Dashboard</code> folder and run <code>pip install -r requirements.txt</code>.</li>
-            <li>Optional, for the voice: <code>pip install -r requirements-voice.txt</code>.</li>
-            <li>Start it by double-clicking <code>Run Dashboard.bat</code>.</li>
+            <li>Open the <a href="https://github.com/sekar28/sekar-voyage/releases/tag/dashboard-v1.0.0" rel="noopener">Dashboard release</a> and download the installer, the <code>.cer</code> certificate and <code>Trust-Certificate.ps1</code> into one folder.</li>
+            <li>Optional: check the file. In PowerShell run <code>Get-FileHash</code> on the installer and compare the result with the SHA-256 on the release page.</li>
+            <li>Optional: right-click <code>Trust-Certificate.ps1</code> and run it with PowerShell. It is the same certificate as System Utilities, so you only need to do this once.</li>
+            <li>Run the installer. If Windows SmartScreen says &ldquo;Windows protected your PC&rdquo;, choose <em>More info</em>, then <em>Run anyway</em>: the certificate is one I made myself, which Microsoft does not know yet.</li>
           </ol>
-          <a class="download" href="https://github.com/sekar28/sekar-voyage/tree/main/Dashboard" rel="noopener">Get the code on GitHub</a>
-          <p class="more-links"><a href="https://github.com/sekar28/sekar-voyage/blob/main/Dashboard/README.md" rel="noopener">Full install guide and settings</a></p>
+          <p>The installer leaves out two optional extras: Piper, the more natural voice (it uses the Windows voice instead), and speech-to-text on an NVIDIA graphics card. Both work when you run the dashboard from the source code.</p>
+          <a class="download" href="https://github.com/sekar28/sekar-voyage/releases/tag/dashboard-v1.0.0" rel="noopener">Download version 1.0.0</a>
+          <p class="more-links"><a href="https://github.com/sekar28/sekar-voyage/tree/main/Dashboard" rel="noopener">Source code on GitHub</a> &middot; <a href="https://github.com/sekar28/sekar-voyage/blob/main/Dashboard/README.md" rel="noopener">Full install guide and settings</a></p>
         </div>
 
         <a class="next" href="system-utilities.html" data-reveal data-project="utilities">

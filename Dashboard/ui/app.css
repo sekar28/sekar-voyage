@@ -475,3 +475,28 @@ body.editing .tile:not(.off) > .ed { display: flex; }
 .toast.err { border-color: var(--bad); }
 
 @media (prefers-reduced-motion: reduce) { .photo, .photo-bg { transition: none; } .voice[data-state="recording"] .mic { animation: none; } }
+
+/* ---------------------------------------------------------------- Network tile (data from Sekar's Network Watch) */
+.net-body { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; padding: 0 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+.net-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 6px; }
+.net-stats div { background: var(--tile-2); border-radius: 10px; padding: 6px 8px; min-width: 0; }
+.net-stats small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.net-stats b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.net-stats small { color: var(--ink-3); font-size: 11px; }
+.net-stats .warn { box-shadow: inset 0 0 0 1px var(--warn); }
+.net-stats .warn small { color: var(--warn); }
+.net-body h3 { margin: 4px 0 0; }
+.net-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.net-list li { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.net-list li:last-child { border-bottom: 0; }
+.net-list li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.net-list li small { color: var(--ink-3); white-space: nowrap; }
+.net-list li.warn { flex-direction: column; gap: 0; min-width: 0; }
+.net-list li.warn b, .net-list li.warn small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.net-list li.warn b { color: var(--warn); font-weight: 600; }
+.net-list.mons li span { color: var(--good-ink); }
+.net-list.mons li.bad span { color: var(--bad-ink); }
+.net-more { color: var(--ink-3); font-size: 11.5px; }
+.net-off { margin: auto; text-align: center; color: var(--ink-2); }
+.net-off p { margin: 0 0 10px; }
+.net-body .btn.sm { align-self: flex-start; }

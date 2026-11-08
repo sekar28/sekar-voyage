@@ -1,8 +1,10 @@
 # Third-party notices
 
 Sekar's Dashboard's own code is MIT-licensed (see [LICENSE](LICENSE)). It uses the open-source packages, downloadable
-models and online services below, each under its own licence or terms. Nothing on this page is included in this
-repository: you install the packages yourself with `pip`, and models are downloaded on first use.
+models and online services below, each under its own licence or terms. None of them is in this repository. The
+**installer** bundles the packages in the first two tables (plus their own dependencies, such as onnxruntime,
+CTranslate2, PyAV with FFmpeg, SciPy, scikit-learn, tokenizers and huggingface_hub, each under its own permissive
+or LGPL licence), but never Piper, the NVIDIA libraries or any downloaded model.
 
 ## Python packages (`requirements.txt`)
 
