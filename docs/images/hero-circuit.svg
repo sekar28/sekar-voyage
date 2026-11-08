@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid slice">
+  <style>
+    .t { fill: none; stroke: #8fb8ff; stroke-opacity: .16; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+    .n { fill: #0b2545; stroke: #8fb8ff; stroke-opacity: .5; stroke-width: 1.4; }
+    .p { fill: none; stroke: #5ad1ff; stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 36 900; animation: run 7s linear infinite; }
+    .p2 { animation-duration: 9s; animation-delay: -3s; }
+    .p3 { animation-duration: 11s; animation-delay: -6s; }
+    @keyframes run { from { stroke-dashoffset: 936; } to { stroke-dashoffset: 0; } }
+    @media (prefers-reduced-motion: reduce) { .p { animation: none; opacity: 0; } }
+  </style>
+  <g class="t">
+    <path id="a" d="M80 120h220l60 60h240l50-50h210"/>
+    <path id="b" d="M0 360h180l70 70h300l60-60h180l70 70h340"/>
+    <path id="c" d="M300 720v-120l60-60h160l40-40v-110"/>
+    <path id="d" d="M760 0v90l60 60h170l60 60h150"/>
+    <path d="M980 720v-150l-60-60h-130"/>
+    <path d="M120 600h200l50-50h120"/>
+    <path d="M620 240v120m140-60v180h120"/>
+  </g>
+  <g class="n">
+    <circle cx="80" cy="120" r="6"/><circle cx="890" cy="130" r="6"/><circle cx="250" cy="430" r="6"/>
+    <circle cx="1120" cy="430" r="6"/><circle cx="560" cy="540" r="6"/><circle cx="760" cy="90" r="6"/>
+    <circle cx="1200" cy="210" r="6"/><circle cx="620" cy="240" r="6"/><circle cx="880" cy="420" r="6"/>
+  </g>
+  <use href="#a" class="p"/>
+  <use href="#b" class="p p2"/>
+  <use href="#d" class="p p3"/>
+</svg>
