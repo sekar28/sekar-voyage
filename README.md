@@ -1,5 +1,7 @@
 # Sekar's Voyage
 
+**Website:** https://sekar28.github.io/sekar-voyage/
+
 Free, open-source tools I build with AI, for everyday Windows users. Each project lives in its own folder with its
 own README.
 
@@ -22,6 +24,7 @@ sekar-voyage/
 ├── Dashboard/           the second-monitor dashboard (Python + HTML/CSS/JS)
 │   ├── widgets/         one module per tile (weather, news, music, tasks…)
 │   └── ui/              the interface, including Widget Studio's sandbox SDK
+├── docs/                the website (GitHub Pages: https://sekar28.github.io/sekar-voyage/)
 └── shared/
     └── sekar_common/    code shared by my apps: AI providers, key storage (Windows Credential Manager), voice
 ```
