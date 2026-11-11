@@ -2786,3 +2786,95 @@ html {
   scrollbar-width: thin;
   scrollbar-color: light-dark(#9db8e6, #2f4d7d) transparent;
 }
+
+/* ------------------------------------------------------------------
+   Raspberry Pi hub story: raspberry accent, spec tables, network diagram
+   ------------------------------------------------------------------ */
+[data-project="pihub"] {
+  --pa: #c4204f;
+  --pb: #ff8fa8;
+  --pd: #7d1030;
+  --pbtn: #b11a43;
+  --pink: light-dark(#a3153f, #ff9db4);
+  --ptint: light-dark(#fde8ee, #3a1424);
+  --ptag: #8a1235;
+}
+
+.spec-wrap {
+  margin: 1.4em 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.spec {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  font-size: 0.97rem;
+  line-height: 1.5;
+}
+
+.spec th,
+.spec td {
+  padding: 12px 16px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.spec tr:last-child th,
+.spec tr:last-child td { border-bottom: 0; }
+
+.spec tbody th[scope="row"] {
+  width: 26%;
+  font-weight: 700;
+  color: var(--pink, var(--link));
+  white-space: nowrap;
+}
+
+.spec thead th {
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--alt);
+}
+
+.spec-3 tbody th[scope="row"] { width: 20%; white-space: normal; }
+
+@media (max-width: 600px) {
+  .spec tbody th[scope="row"] { width: 30%; white-space: normal; }
+  .spec-3 thead { display: none; }
+  .spec-3 tr, .spec-3 tbody th, .spec-3 td { display: block; width: auto !important; }
+  .spec-3 tr { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .spec-3 tr:last-child { border-bottom: 0; }
+  .spec-3 th, .spec-3 td { padding: 0 !important; border: 0 !important; }
+  .spec-3 td { margin-top: 4px; }
+  .spec-3 td[data-label]::before { content: attr(data-label) ": "; font-weight: 700; color: var(--muted); }
+}
+
+.net-figure { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); }
+.net-figure figcaption { margin-top: 12px; }
+
+.net-diagram { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; font-family: var(--font-display); }
+.net-diagram .nd-box rect:first-child { fill: var(--alt); stroke: var(--line); stroke-width: 1.5; }
+.net-diagram .nd-title { fill: var(--heading); font-size: 17px; font-weight: 700; }
+.net-diagram .nd-sub { fill: var(--muted); font-size: 14px; }
+.net-diagram .nd-chip { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.net-diagram .nd-chip-t { fill: var(--text); font-size: 14px; text-anchor: middle; }
+.net-diagram .nd-pi { fill: var(--ptint); stroke: var(--pa); stroke-width: 2; }
+.net-diagram .nd-pi-title { fill: var(--heading); font-size: 19px; font-weight: 700; text-anchor: middle; }
+.net-diagram .nd-pi-sub { fill: var(--muted); font-size: 14px; text-anchor: middle; }
+.net-diagram .nd-wire { stroke: var(--pa); stroke-width: 3; fill: none; stroke-linecap: round; }
+.net-diagram .nd-wire.dashed { stroke-dasharray: 3 8; }
+.net-diagram .nd-label { fill: var(--muted); font-size: 14px; }
+.net-diagram .nd-note { fill: var(--pink, var(--link)); font-size: 14px; font-weight: 600; }
+
+@media (max-width: 520px) {
+  .net-diagram .nd-title { font-size: 21px; }
+  .net-diagram .nd-pi-title { font-size: 21px; }
+  .net-diagram .nd-sub, .net-diagram .nd-label, .net-diagram .nd-note, .net-diagram .nd-pi-sub, .net-diagram .nd-chip-t { font-size: 17.5px; }
+}
