@@ -2064,7 +2064,7 @@ catsBox.addEventListener('click', onVdClick);
 
 /* ---------- smart document classification (only when the user asks) ---------- */
 const METHOD_LABEL = { name: 'from name', 'ai-name': 'AI · name only', read: 'AI · read inside', 'no-text': 'no text inside',
-  unreadable: "can't read", unrecognised: 'check by hand' };
+  unreadable: "can't read", 'no-answer': 'no AI answer', unrecognised: 'check by hand' };
 
 function clsRows(files) {
   return files.map((f, i) => `<div class="item" data-path="${esc(f.path)}" style="--i:${Math.min(i, 12)}">

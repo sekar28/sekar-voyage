@@ -1289,14 +1289,24 @@ class Api:
             cache[content.cache_key(f["path"], f["size"], f["mtime"])] = {
                 "category": f["category"], "summary": f["summary"], "method": f["method"]}
 
+        def keep(files, method):
+            """Apply each batch of answers as it arrives and save the cache, so a later failed batch costs nothing
+            twice. A file the AI skipped stays unclassified and is not cached - it is asked about again next time."""
+            def on_batch(start, answers):
+                for f, answer in zip(files[start:], answers):
+                    if answer is None:
+                        f.update(method="no-answer", summary="The AI gave no answer for this file - run the analysis again")
+                    else:
+                        f.update(category=answer[0], summary=answer[1], method=method)
+                        remember(f)
+                content.save_cache(cache)
+            return on_batch
+
         named = [f for f in docs if f.get("tier") == "names"]
         if client and named:
             sizes = [min(content.NAMES_BATCH, len(named) - s) for s in range(0, len(named), content.NAMES_BATCH)]
-            results = content.ask(client, content.names_prompts([f["name"] for f in named]), sizes,
-                                  content.NAMES_MAX_TOKENS, progress, "Classifying by name")
-            for f, (cat, summary) in zip(named, results):
-                f.update(category=cat, summary=summary, method="ai-name")
-                remember(f)
+            content.ask(client, content.names_prompts([f["name"] for f in named]), sizes,
+                        content.NAMES_MAX_TOKENS, progress, "Classifying by name", keep(named, "ai-name"))
 
         reads = [f for f in docs if f.get("tier") == "read"]
         if client and reads and mode != "names_only":
@@ -1317,11 +1327,8 @@ class Api:
                     items.append((f["name"], snip))
                     readable.append(f)
             sizes = [min(content.CONTENT_BATCH, len(items) - s) for s in range(0, len(items), content.CONTENT_BATCH)]
-            results = content.ask(client, content.content_prompts(items), sizes, content.CONTENT_MAX_TOKENS,
-                                  progress, "Reading documents with unclear names")
-            for f, (cat, summary) in zip(readable, results):
-                f.update(category=cat, summary=summary, method="read")
-                remember(f)
+            content.ask(client, content.content_prompts(items), sizes, content.CONTENT_MAX_TOKENS,
+                        progress, "Reading documents with unclear names", keep(readable, "read"))
         content.save_cache(cache)
 
         groups = {}
@@ -1390,6 +1397,7 @@ class Api:
             if (getattr(self, "_cls_last", None) or {}).get("folder") == path else {}
         why_unclassified = {"no-text": "couldn't be classified - no readable text inside (probably a scan)",
                             "unreadable": "couldn't be classified - old or damaged format the app can't read",
+                            "no-answer": "couldn't be classified - the AI gave no answer for it; run the analysis again",
                             "unrecognised": "couldn't be classified - the name says nothing and it wasn't read"}
         left = []
         for e in self._loose_files(path):
