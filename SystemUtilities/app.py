@@ -487,7 +487,7 @@ class Api:
             node = refresh_path(root, path)
             return freed, skipped, (node.size if node else 0)
         if act == "recycle":
-            quickclean.send_to_recycle_bin(path)
+            quickclean.send_to_recycle_bin(path)             # raises unless it is really gone
             remove_path(root, path)
             return item["size"], 0, 0
         if act == "freeup":
@@ -841,7 +841,8 @@ class Api:
             removed += 1
             freed += g["size"]
         r["groups"] = [g for g in r["groups"] if g["dupes"]]
-        return {"removed": removed, "freed": freed, "failed": failed[:5], "result": versions.summarise(r)}
+        return {"removed": removed, "freed": freed, "failed": failed[:5], "failed_count": len(failed),
+                "result": versions.summarise(r)}
 
     @safe
     def clean_category(self, name):

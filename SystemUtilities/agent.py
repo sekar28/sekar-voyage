@@ -78,6 +78,14 @@ def plural(n, word):
     return f"{n} {head + ' ' if head else ''}{last}"
 
 
+def outcome(done, problems=(), failed=0, total=0):
+    """The sentence spoken after a change ran. It opens with "Done." only if nothing failed, and names what didn't
+    happen: outcome("Freed 2 GB", ["3 files in use were skipped"]) -> "Done. Freed 2 GB; 3 files in use were skipped." """
+    lead = "Done." if not failed else "That didn't work." if total and failed >= total else "Partly done."
+    problems = [p for p in problems if p]
+    return f"{lead} {done}" + (f"; {'; '.join(problems)}." if problems else ".")
+
+
 class Reply:
     def __init__(self, say, pending=None):
         self.say, self.pending = say, pending
@@ -244,6 +252,8 @@ class Agent:
                 reply = self._answer(text)
             except (LLMError, RuntimeError, ValueError, FileNotFoundError, PermissionError) as e:
                 reply = Reply(f"Sorry, {str(e).rstrip('.')}.")
+            except Exception as e:       # anything unexpected still gets an answer instead of a dropped request
+                reply = Reply(f"Sorry, something went wrong with that request ({type(e).__name__}).")
         if reply.pending is not None:
             self._set_pending(reply.pending)
         self.history.append(("user", text))
@@ -289,7 +299,8 @@ class Agent:
         if isinstance(out, dict) and out.get("say") and not out.get("tool"):
             return "say", {"text": str(out["say"])}
         if isinstance(out, dict) and out.get("tool"):
-            return str(out["tool"]), dict(out.get("args") or {})
+            args = out.get("args")       # the model writes this: trust its shape no further than a plain object
+            return str(out["tool"]), dict(args) if isinstance(args, dict) else {}
         return "help", {}
 
     @staticmethod
@@ -314,7 +325,7 @@ class Agent:
         return self.api._llm
 
     def folder(self, name, default="downloads"):
-        name = (name or default or "").strip()
+        name = str(name or default or "").strip()
         folders = self.api.known_folders()
         known = {f["name"].lower(): f["path"] for f in folders} if isinstance(folders, list) else {}
         low = name.lower()
@@ -413,7 +424,10 @@ class Agent:
 
         def run():
             r = self.call("quick_clean", ids)
-            return f"Done. Freed {fmt(r['freed'])}" + (f"; {plural(r['skipped'], 'file')} in use were skipped." if r["skipped"] else ".")
+            errors = sum(1 for res in r.get("results", []) if res.get("error"))    # whole areas that raised
+            return outcome(f"Freed {fmt(r['freed'])}",
+                           [r["skipped"] and f"{plural(r['skipped'], 'file')} in use were skipped",
+                            errors and f"{plural(errors, 'area')} of {len(ids)} couldn't be cleaned"], errors, len(ids))
         q = f"You can free {fmt(total)} of junk: {top}.{habit} Shall I clean it?"
         return Reply(q, Pending("junk", q, run, [f"{t['name']} ({fmt(sizes[t['id']]['size'])})" for t in usable],
                                 review={"view": "quick"}))
@@ -450,11 +464,12 @@ class Agent:
         path = self.folder(args.get("folder"))
         self._scan(path)
         self.call("find_candidates")
+        ai_note = ""
         if self._ai() is not None:
             try:
                 self.call("ai_review")
-            except RuntimeError:
-                pass
+            except RuntimeError as e:    # the built-in rules still apply - but say the AI part is missing
+                ai_note = f" The AI check of the big folders didn't finish ({str(e).rstrip('.')}), so this is from the built-in rules."
         picks, by_cat = [], {}
         for cat in list(self.api._cats) + ([self.api._ai_cat] if self.api._ai_cat else []):
             source_cat = None if cat.source == "ai" else cat
@@ -470,21 +485,25 @@ class Agent:
         if not picks:
             review = sum(c.total for c in self.api._cats if c.risk != cleanup.SAFE)
             return Reply(f"Nothing in {name} is safe to delete without a look." +
-                         (f" {fmt(review)} is worth reviewing - open Clean-up to see it." if review > 50 * MB else ""))
+                         (f" {fmt(review)} is worth reviewing - open Clean-up to see it." if review > 50 * MB else "") + ai_note)
         total = sum(by_cat.values())
         top = ", ".join(f"{k.lower()} {fmt(v)}" for k, v in sorted(by_cat.items(), key=lambda kv: -kv[1])[:3])
         paths = [i["path"] for i, _ in picks]
 
         def run():
-            freed = failed = 0
+            freed = failed = skipped = 0
             for p in paths:
                 r = self.api.clean_item(p)
                 if isinstance(r, dict) and "__error__" not in r:
                     freed += r.get("freed", 0)
+                    skipped += r.get("skipped", 0)
                 else:
                     failed += 1
-            return f"Done. Freed {fmt(freed)}" + (f"; {plural(failed, 'item')} couldn't be removed." if failed else ".")
-        q = f"In {name}, {fmt(total)} is safe to delete: {top}. Deleted folders' contents go away, files go to the Recycle Bin. Shall I clean them?"
+            return outcome(f"Freed {fmt(freed)}",
+                           [skipped and f"{plural(skipped, 'file')} in use were skipped",
+                            failed and f"{plural(failed, 'item')} of {len(paths)} couldn't be removed"], failed, len(paths))
+        q = (f"In {name}, {fmt(total)} is safe to delete: {top}. Deleted folders' contents go away, files go to the "
+             f"Recycle Bin.{ai_note} Shall I clean them?")
         return Reply(q, Pending("files", q, run, paths, categories=list(by_cat), review={"view": "cleanup", "path": path}))
 
     # ---- old documents (learned)
@@ -599,8 +618,9 @@ class Agent:
 
         def run():
             res = self.call("remove_version_dupes", dupes)
+            skipped = res.get("failed_count", len(res["failed"]))      # "failed" itself lists only the first few
             return f"Moved {plural(res['removed'], 'copy')} to the Recycle Bin, freeing {fmt(res['freed'])}." + \
-                (f" {len(res['failed'])} were skipped." if res["failed"] else "")
+                (f" {skipped} of {len(dupes)} were skipped, for example {res['failed'][0]}." if skipped else "")
         q = (f"{name} has {plural(len(dupes), 'extra copy')} of files like name(1), identical to the original, "
              f"using {fmt(waste)}. Move the copies to the Recycle Bin and keep the originals?")
         return Reply(q, Pending("dupes", q, run, dupes, review={"view": "cleanup", "path": path}))
@@ -629,12 +649,13 @@ class Agent:
         before = snap["live"]["mem_pct"]
 
         def run():
-            closed = 0
+            closed = stuck = 0
             if keys:
                 r = self.call("perf_end", keys, False)
-                closed = len(r["closed"])
+                closed, stuck = len(r["closed"]), len(r.get("failed") or [])
             t = self.call("perf_trim")
-            return f"Done. Closed {plural(closed, 'background helper')} and cleaned RAM: memory {before}% to {t['after']['mem_pct']}%."
+            return outcome(f"Closed {plural(closed, 'background helper')} and cleaned RAM: memory {before}% to {t['after']['mem_pct']}%",
+                           [stuck and f"{plural(stuck, 'helper')} wouldn't close"], stuck, len(keys) + 1)
         what = f"close {plural(len(safe), 'background helper')} using {fmt(mem)} and clean RAM" if safe else "clean RAM"
         q = f"I can {what}. Open apps are left alone. Go ahead?"
         return Reply(q, Pending("boost", q, run, [g["desc"] or g["name"] for g in safe], review={"view": "perf"}))
@@ -677,13 +698,17 @@ class Agent:
         return Reply(q, Pending("orphans", q, run, [g["desc"] or g["name"] for g in full], review={"view": "perf"}))
 
     def t_suspicious(self, args):
+        unchecked = None
         try:
             snap = self.call("perf_snapshot")
             self.mem.sample_processes(snap["groups"], agent_memory.foreground_exe(), agent_memory.internet_pids())
-        except RuntimeError:
-            pass
+        except RuntimeError as e:
+            unchecked = str(e).rstrip(".")
         self.mem.check_signatures()
         sus = self.mem.suspicious()
+        if not sus and unchecked:        # no fresh look at what's running: that is not an all-clear
+            return Reply(f"I couldn't check what's running right now ({unchecked}), so I can't say whether anything "
+                         "looks suspicious. Nothing I saw earlier does. Ask me again in a moment.")
         if not sus:
             return Reply("Nothing running looks suspicious. Every program I've seen is signed or comes from a normal place.")
         first = sus[0]
@@ -718,7 +743,10 @@ class Agent:
             for i in ids:
                 r = self.api.perf_set_startup(i, False)
                 done += isinstance(r, dict) and "__error__" not in r
-            return f"Turned off {plural(done, 'startup app')}. They're still installed, and you can switch them back on in Performance."
+            left = len(ids) - done
+            return outcome(f"Turned off {plural(done, 'startup app')}",
+                           [left and f"{left} couldn't be changed"], left, len(ids)) + \
+                " They're still installed, and you can switch them back on in Performance."
         detail = "; ".join(f"{u['name']} runs most days but you haven't opened it "
                            f"{'at all' if u['never_used'] else f'for {u['idle_days']} days'}" for u in unused[:3])
         q = f"{detail}. Stop {'them' if len(unused) > 1 else 'it'} starting with Windows?"

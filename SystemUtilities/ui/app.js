@@ -2044,8 +2044,9 @@ async function removeVd(paths, btn) {
     const r = await Bridge.call('remove_version_dupes', paths);
     S.vd = r.result;
     renderVd();
-    toast(r.failed.length ? 'info' : 'ok', `Removed ${r.removed} cop${r.removed === 1 ? 'y' : 'ies'} · freed ${fmtSize(r.freed)}` +
-      (r.failed.length ? ` · ${r.failed.length} skipped: ${r.failed[0]}` : ''), 6000);
+    const skipped = r.failed_count ?? r.failed.length;   // r.failed lists only the first few
+    toast(skipped ? 'info' : 'ok', `Removed ${r.removed} cop${r.removed === 1 ? 'y' : 'ies'} · freed ${fmtSize(r.freed)}` +
+      (skipped ? ` · ${skipped} skipped: ${r.failed[0]}` : ''), 6000);
     refreshFolder();
   } catch (e) { fail(e); if (btn) busy(btn, false); }
 }

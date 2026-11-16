@@ -490,7 +490,9 @@ def send_to_recycle_bin(path):
     if rc != 0 or op.fAnyOperationsAborted:
         raise OSError("Windows could not move it to the Recycle Bin (it may be open in another program)."
                       if rc else "Cancelled.")
-    return not os.path.exists(path)
+    if os.path.exists(path):         # Windows reported no error, yet nothing moved: callers must not count it as freed
+        raise OSError("Windows reported no error, but it is still there - nothing was moved to the Recycle Bin.")
+    return True
 
 
 def free_up_space(folder):
