@@ -170,6 +170,17 @@ def is_protected(rel):
     return first in PROTECTED_PREFIXES or any(g.match(rel) for g in APPDATA_PROGRAMS)
 
 
+def is_personal(rel):
+    """Inside someone's user folder (Documents, Pictures, Desktop, Downloads, their own project folders...).
+    AppData is left out: it holds app caches, which have their own rule. An AI opinion is never enough to
+    call these safe to delete - the person decides, in the Clean-up screen."""
+    parts = rel.split("\\")
+    return parts[0] == "users" and len(parts) >= 2 and (len(parts) < 3 or parts[2] != "appdata")
+
+
+PERSONAL_NOTE = "(Inside your personal folders, so it is never cleaned automatically - check it and decide yourself.)"
+
+
 class Category:
     def __init__(self, name, risk, impact, how, source="rule"):
         self.name = name
@@ -379,6 +390,10 @@ def ai_review_folders(llm, folders, progress=None, batch=5):
                 risk = REVIEW
                 action = (action + " " if action else "") + \
                     "(App data: close the app first, and prefer its own 'clear cache' option.)"
+            elif risk == SAFE and is_personal(rel):
+                # The prompt asks for "review" on personal files; this makes it a rule the model can't break.
+                risk = REVIEW
+                action = (action + " " if action else "") + PERSONAL_NOTE
             cat.items.append({
                 "path": path, "size": node.size, "kind": "dir",
                 "note": a.get("what", "no answer from model"),
