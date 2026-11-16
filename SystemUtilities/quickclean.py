@@ -460,7 +460,8 @@ def run_disk_cleanup(target):
     script, out = os.path.join(work, "cleanmgr.ps1"), os.path.join(work, "result.txt")
     with open(script, "w", encoding="utf-8-sig") as f:
         f.write(CLEANMGR_SCRIPT)
-    drivers.run_elevated("powershell.exe", f'-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{script}" -Out "{out}"')
+    drivers.run_elevated("powershell.exe", f'-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{script}" -Out "{out}"',
+                         timeout=45 * 60, what="Disk Cleanup")
     try:
         with open(out, encoding="utf-8-sig") as f:
             status = f.read().strip()

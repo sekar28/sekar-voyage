@@ -975,6 +975,9 @@ class Api:
                     self._emit("scan_done", {"path": root.path, "size": root.size, "cloud": root.cloud,
                                              "files": files, "dirs": dirs, "elapsed": time.monotonic() - started})
                     return
+                elif msg[0] == "failed":
+                    self._emit("scan_failed", {"error": msg[1]})
+                    return
                 else:
                     self._emit("scan_cancelled")
                     return

@@ -805,6 +805,11 @@ const Events = {
     showView(PANEL_MODES.includes(S.mode) && S.folder ? 'explorer' : homeView());
     toast('info', 'Scan cancelled');
   },
+  scan_failed(d) {
+    S.scanning = false;
+    showView(PANEL_MODES.includes(S.mode) && S.folder ? 'explorer' : homeView());
+    toast('err', `The scan failed: ${d.error}`, 8000);
+  },
   agent_line(d) { agentLine(d); S.agent.pending = d.pending; S.agent.job = d.job; renderAgentStatus(); },
   agent_pending(d) { S.agent.pending = d; renderAgentStatus(); },
   agent_job(d) { S.agent.job = d.job; renderAgentStatus(); },

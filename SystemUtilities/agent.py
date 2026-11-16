@@ -26,6 +26,8 @@ from llm import LLMError
 GB, MB = 1024 ** 3, 1024 ** 2
 PENDING_TTL = 300               # a question waits 5 minutes for your answer
 SCAN_REUSE = 15 * 60            # reuse a scan of the same folder made in the last 15 minutes
+SCAN_LIMIT = 3600               # the longest a job waits for a scan
+SCAN_HANDOVER = 10              # a finished scan hands its result over within moments; after this it never will
 CRIT_PCT = 95                   # CPU / memory / GPU above this for ~a minute = critical alert (bell)
 CRIT_DISK = 98                  # any drive more than this % full = critical alert (bell)
 
@@ -445,20 +447,33 @@ class Agent:
                 and os.path.normcase(root.path) == key):
             return root
         self.call("start_scan", path)
-        deadline = time.time() + 3600
-        while time.time() < deadline:
-            sc = self.api._scanner
-            if sc is not None and not sc.is_alive() and self.api._root is not None:
-                break
-            if sc is not None and not sc.is_alive() and getattr(sc, "cancelled", False):
-                raise RuntimeError("the scan was cancelled")
-            time.sleep(0.5)
+        self._wait_for_scan()
         try:
             mtime = os.stat(path).st_mtime
         except OSError:
             pass
         self._scanned[key] = (time.time(), mtime)
         return self.api._root
+
+    def _wait_for_scan(self, limit=SCAN_LIMIT, handover=SCAN_HANDOVER, poll=0.5):
+        """Wait until the running scan has a result. Every other way a scan can end raises, so a job never sits
+        on a scan that is no longer running."""
+        deadline, ended = time.time() + limit, None
+        while True:
+            sc = self.api._scanner
+            if sc is not None and not sc.is_alive():
+                if self.api._root is not None:
+                    return
+                if getattr(sc, "cancelled", False):
+                    raise RuntimeError("the scan was cancelled")
+                if getattr(sc, "error", None):
+                    raise RuntimeError(f"the scan failed: {sc.error}")
+                ended = ended or time.time()         # finished: its result is handed over a moment later
+                if time.time() - ended > handover:
+                    raise RuntimeError("the scan stopped without a result")
+            if time.time() > deadline:
+                raise RuntimeError(f"the scan is taking over {limit // 60} minutes, so I've stopped waiting for it")
+            time.sleep(poll)
 
     def t_deletable(self, args):
         path = self.folder(args.get("folder"))

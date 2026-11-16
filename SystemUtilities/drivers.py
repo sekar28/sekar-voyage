@@ -189,18 +189,27 @@ class SHELLEXECUTEINFOW(ctypes.Structure):
                 ("dwHotKey", wintypes.DWORD), ("hIconOrMonitor", wintypes.HANDLE), ("hProcess", wintypes.HANDLE)]
 
 
-def run_elevated(exe, params, on_tick=None):
-    """Start a process with the UAC prompt and wait for it. Raises PermissionError if the user declines."""
+INSTALL_WAIT = 60 * 60     # seconds a driver install may take (restore point + download + install) before we stop waiting
+
+
+def run_elevated(exe, params, on_tick=None, timeout=None, what="The task"):
+    """Start a process with the UAC prompt and wait for it. Raises PermissionError if the user declines.
+    timeout: seconds to wait once it has started (the UAC prompt is not counted). An elevated process can't be
+    stopped from here, so on a timeout we stop waiting, say so, and leave it running."""
     info = SHELLEXECUTEINFOW(cbSize=ctypes.sizeof(SHELLEXECUTEINFOW), fMask=0x40,   # SEE_MASK_NOCLOSEPROCESS
                              lpVerb="runas", lpFile=exe, lpParameters=params, nShow=0)
     if not ctypes.windll.shell32.ShellExecuteExW(ctypes.byref(info)):
         if ctypes.GetLastError() == 1223:    # ERROR_CANCELLED
             raise PermissionError("Administrator permission was declined, so nothing was installed.")
         raise ctypes.WinError()
+    deadline = time.monotonic() + timeout if timeout else None
     try:
         while ctypes.windll.kernel32.WaitForSingleObject(info.hProcess, 500) == 0x102:   # WAIT_TIMEOUT
             if on_tick:
                 on_tick()
+            if deadline and time.monotonic() > deadline:
+                raise TimeoutError(f"{what} didn't finish within {max(1, round(timeout / 60))} minutes, so I've stopped "
+                                   "waiting. It may still be running in the background - check before trying again.")
     finally:
         ctypes.windll.kernel32.CloseHandle(info.hProcess)
 
@@ -224,7 +233,7 @@ def install_updates(ids, restore_point=True, progress=None):
             last[0] = step
             progress(step)
 
-    run_elevated("powershell.exe", params, tick)
+    run_elevated("powershell.exe", params, tick, timeout=INSTALL_WAIT, what="The driver install")
     if not os.path.exists(out):
         raise RuntimeError("The installer did not report back - check Windows Update for details.")
     with open(out, encoding="utf-8-sig") as f:
