@@ -805,6 +805,11 @@ const Events = {
     showView(PANEL_MODES.includes(S.mode) && S.folder ? 'explorer' : homeView());
     toast('info', 'Scan cancelled');
   },
+  scan_failed(d) {
+    S.scanning = false;
+    showView(PANEL_MODES.includes(S.mode) && S.folder ? 'explorer' : homeView());
+    toast('err', `The scan failed: ${d.error}`, 8000);
+  },
   agent_line(d) { agentLine(d); S.agent.pending = d.pending; S.agent.job = d.job; renderAgentStatus(); },
   agent_pending(d) { S.agent.pending = d; renderAgentStatus(); },
   agent_job(d) { S.agent.job = d.job; renderAgentStatus(); },
@@ -2044,8 +2049,9 @@ async function removeVd(paths, btn) {
     const r = await Bridge.call('remove_version_dupes', paths);
     S.vd = r.result;
     renderVd();
-    toast(r.failed.length ? 'info' : 'ok', `Removed ${r.removed} cop${r.removed === 1 ? 'y' : 'ies'} · freed ${fmtSize(r.freed)}` +
-      (r.failed.length ? ` · ${r.failed.length} skipped: ${r.failed[0]}` : ''), 6000);
+    const skipped = r.failed_count ?? r.failed.length;   // r.failed lists only the first few
+    toast(skipped ? 'info' : 'ok', `Removed ${r.removed} cop${r.removed === 1 ? 'y' : 'ies'} · freed ${fmtSize(r.freed)}` +
+      (skipped ? ` · ${skipped} skipped: ${r.failed[0]}` : ''), 6000);
     refreshFolder();
   } catch (e) { fail(e); if (btn) busy(btn, false); }
 }
@@ -2064,7 +2070,7 @@ catsBox.addEventListener('click', onVdClick);
 
 /* ---------- smart document classification (only when the user asks) ---------- */
 const METHOD_LABEL = { name: 'from name', 'ai-name': 'AI · name only', read: 'AI · read inside', 'no-text': 'no text inside',
-  unreadable: "can't read", unrecognised: 'check by hand' };
+  unreadable: "can't read", 'no-answer': 'no AI answer', unrecognised: 'check by hand' };
 
 function clsRows(files) {
   return files.map((f, i) => `<div class="item" data-path="${esc(f.path)}" style="--i:${Math.min(i, 12)}">
@@ -3064,7 +3070,7 @@ function renderAgentStatus() {
   box.innerHTML = `<b>${esc(p.question)}</b>
     ${p.items.length ? `<details><summary>${num(p.count)} item${p.count === 1 ? '' : 's'}</summary><ul>${p.items.map(i => `<li>${esc(i)}</li>`).join('')}
       ${p.count > p.items.length ? `<li>… and ${num(p.count - p.items.length)} more</li>` : ''}</ul></details>` : ''}
-    <div class="agent-btns"><button class="btn clean sm" data-ans="yes">${icon('checkmark')}Yes</button>
+    <div class="agent-btns" data-pid="${esc(p.id)}"><button class="btn clean sm" data-ans="yes">${icon('checkmark')}Yes</button>
       <button class="btn sm" data-ans="no">No</button>${p.review && p.review.view ? `<button class="btn sm" data-ans="review">${icon('eye')}Review</button>` : ''}</div>`;
 }
 
@@ -3165,7 +3171,8 @@ $('#agentForm').addEventListener('submit', e => {
 $('#agentPending').addEventListener('click', async e => {
   const b = e.target.closest('[data-ans]');
   if (!b) return;
-  try { await Bridge.call('agent_answer', b.dataset.ans); } catch (err) { fail(err); }
+  // the id says which question these buttons were drawn for, so a click can't answer one that replaced it
+  try { await Bridge.call('agent_answer', b.dataset.ans, b.closest('[data-pid]').dataset.pid); } catch (err) { fail(err); }
 });
 $('#agentMonitor').addEventListener('change', e => Bridge.call('agent_settings', e.target.checked, null).catch(fail));
 $('#agentStartup').addEventListener('change', e => Bridge.call('agent_settings', null, e.target.checked)

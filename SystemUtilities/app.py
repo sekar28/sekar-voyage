@@ -487,7 +487,7 @@ class Api:
             node = refresh_path(root, path)
             return freed, skipped, (node.size if node else 0)
         if act == "recycle":
-            quickclean.send_to_recycle_bin(path)
+            quickclean.send_to_recycle_bin(path)             # raises unless it is really gone
             remove_path(root, path)
             return item["size"], 0, 0
         if act == "freeup":
@@ -695,10 +695,14 @@ class Api:
         return self._need_agent().ask(text, "panel")
 
     @safe
-    def agent_answer(self, answer):
-        """Yes / No / Review buttons on the assistant's question."""
+    def agent_answer(self, answer, pending_id=None):
+        """Yes / No / Review buttons on the assistant's question. pending_id: the question the buttons were shown
+        under - an answer to a question that has since changed does nothing."""
         a = self._need_agent()
-        r = {"yes": lambda: a.confirm("click"), "no": a.decline, "review": a.review}[answer]()
+        if not pending_id:
+            raise RuntimeError("That answer didn't say which question it was for, so nothing was done.")
+        pid = str(pending_id)
+        r = {"yes": lambda: a.confirm("click", pid), "no": lambda: a.decline(pid), "review": lambda: a.review(pid)}[answer]()
         a._line("jarvis", r.say)
         return {"say": r.say}
 
@@ -837,7 +841,8 @@ class Api:
             removed += 1
             freed += g["size"]
         r["groups"] = [g for g in r["groups"] if g["dupes"]]
-        return {"removed": removed, "freed": freed, "failed": failed[:5], "result": versions.summarise(r)}
+        return {"removed": removed, "freed": freed, "failed": failed[:5], "failed_count": len(failed),
+                "result": versions.summarise(r)}
 
     @safe
     def clean_category(self, name):
@@ -969,6 +974,9 @@ class Api:
                     self._root, self._top = root, top
                     self._emit("scan_done", {"path": root.path, "size": root.size, "cloud": root.cloud,
                                              "files": files, "dirs": dirs, "elapsed": time.monotonic() - started})
+                    return
+                elif msg[0] == "failed":
+                    self._emit("scan_failed", {"error": msg[1]})
                     return
                 else:
                     self._emit("scan_cancelled")
@@ -1285,14 +1293,24 @@ class Api:
             cache[content.cache_key(f["path"], f["size"], f["mtime"])] = {
                 "category": f["category"], "summary": f["summary"], "method": f["method"]}
 
+        def keep(files, method):
+            """Apply each batch of answers as it arrives and save the cache, so a later failed batch costs nothing
+            twice. A file the AI skipped stays unclassified and is not cached - it is asked about again next time."""
+            def on_batch(start, answers):
+                for f, answer in zip(files[start:], answers):
+                    if answer is None:
+                        f.update(method="no-answer", summary="The AI gave no answer for this file - run the analysis again")
+                    else:
+                        f.update(category=answer[0], summary=answer[1], method=method)
+                        remember(f)
+                content.save_cache(cache)
+            return on_batch
+
         named = [f for f in docs if f.get("tier") == "names"]
         if client and named:
             sizes = [min(content.NAMES_BATCH, len(named) - s) for s in range(0, len(named), content.NAMES_BATCH)]
-            results = content.ask(client, content.names_prompts([f["name"] for f in named]), sizes,
-                                  content.NAMES_MAX_TOKENS, progress, "Classifying by name")
-            for f, (cat, summary) in zip(named, results):
-                f.update(category=cat, summary=summary, method="ai-name")
-                remember(f)
+            content.ask(client, content.names_prompts([f["name"] for f in named]), sizes,
+                        content.NAMES_MAX_TOKENS, progress, "Classifying by name", keep(named, "ai-name"))
 
         reads = [f for f in docs if f.get("tier") == "read"]
         if client and reads and mode != "names_only":
@@ -1313,11 +1331,8 @@ class Api:
                     items.append((f["name"], snip))
                     readable.append(f)
             sizes = [min(content.CONTENT_BATCH, len(items) - s) for s in range(0, len(items), content.CONTENT_BATCH)]
-            results = content.ask(client, content.content_prompts(items), sizes, content.CONTENT_MAX_TOKENS,
-                                  progress, "Reading documents with unclear names")
-            for f, (cat, summary) in zip(readable, results):
-                f.update(category=cat, summary=summary, method="read")
-                remember(f)
+            content.ask(client, content.content_prompts(items), sizes, content.CONTENT_MAX_TOKENS,
+                        progress, "Reading documents with unclear names", keep(readable, "read"))
         content.save_cache(cache)
 
         groups = {}
@@ -1386,6 +1401,7 @@ class Api:
             if (getattr(self, "_cls_last", None) or {}).get("folder") == path else {}
         why_unclassified = {"no-text": "couldn't be classified - no readable text inside (probably a scan)",
                             "unreadable": "couldn't be classified - old or damaged format the app can't read",
+                            "no-answer": "couldn't be classified - the AI gave no answer for it; run the analysis again",
                             "unrecognised": "couldn't be classified - the name says nothing and it wasn't read"}
         left = []
         for e in self._loose_files(path):

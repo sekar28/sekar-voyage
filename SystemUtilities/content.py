@@ -176,7 +176,10 @@ def content_prompts(items):
 
 def _answers(data, count):
     out = {}
-    for item in data.get("items", []) if isinstance(data, dict) else []:
+    items = data.get("items") if isinstance(data, dict) else None
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
         try:
             i = int(item.get("id"))
         except (TypeError, ValueError):
@@ -187,14 +190,19 @@ def _answers(data, count):
     return out
 
 
-def ask(llm, prompts, sizes, max_tokens, progress=None, stage=""):
-    """Run prompt batches; returns a flat list of (category, summary) in input order."""
+def ask(llm, prompts, sizes, max_tokens, progress=None, stage="", on_batch=None):
+    """Run prompt batches; returns a flat list in input order: (category, summary), or None for a file the model
+    gave no answer for (that is not the same as the model answering "other").
+    on_batch(first_index, answers) runs after every batch, so the caller keeps what is done if a later one fails."""
     results = []
     for b, ((system, user), size) in enumerate(zip(prompts, sizes)):
         if progress:
             progress(stage, b, len(prompts))
         got = _answers(llm.chat_json(system, user, max_tokens=max_tokens), size)
-        results += [got.get(i + 1, ("other", "")) for i in range(size)]
+        answers = [got.get(i + 1) for i in range(size)]
+        if on_batch:
+            on_batch(len(results), answers)
+        results += answers
     return results
 
 

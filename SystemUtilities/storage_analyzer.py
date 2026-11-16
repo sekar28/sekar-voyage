@@ -378,6 +378,10 @@ class App(tk.Tk):
                     self._scan_finished()
                     self.path_var.set("Scan cancelled.")
                     self.status_var.set("Ready")
+                elif kind == "failed":
+                    self._scan_finished()
+                    self.path_var.set("Scan failed.")
+                    self.status_var.set(f"The scan failed: {msg[1]}")
                 elif kind == "status":
                     self.status_var.set(msg[1])
                 elif kind == "ui":

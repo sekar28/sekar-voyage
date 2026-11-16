@@ -17,7 +17,53 @@ THINKING_MODELS = ("qwen3", "deepseek-r1")
 
 
 class LLMError(Exception):
-    pass
+    """Any failure talking to a model. The message is short and may be shown or spoken as it is.
+    kind says what went wrong; partial / raw hold whatever text did arrive (never part of the message)."""
+    kind = "error"
+
+    def __init__(self, message, partial="", raw=""):
+        super().__init__(message)
+        self.partial, self.raw = partial, raw
+
+
+class LLMTruncated(LLMError):
+    """The answer hit the token limit before it finished. .partial has what arrived."""
+    kind = "truncated"
+
+
+class LLMBlocked(LLMError):
+    """The service refused or filtered the request."""
+    kind = "blocked"
+
+
+class LLMEmpty(LLMError):
+    """The service answered, with no text."""
+    kind = "empty"
+
+
+class LLMBadFormat(LLMError):
+    """The answer arrived whole but was not the JSON that was asked for. .raw has it."""
+    kind = "bad_format"
+
+
+CUT_MARK = " …"     # ends a plain-text answer that hit the token limit, so it is not read as complete
+
+
+def finish(text, reason, json_mode, who):
+    """Every client ends chat() here: check HOW the reply ended before anyone uses it.
+    reason: "length" (hit the token limit), "blocked" (refused / filtered) or anything else for a normal end."""
+    text = (text or "").strip()
+    if reason == "blocked":
+        raise LLMBlocked(f"{who} declined this request.")
+    if not text:
+        if reason == "length":
+            raise LLMTruncated(f"{who} ran out of room before it wrote an answer - try again, or pick another model.")
+        raise LLMEmpty(f"{who} returned an empty answer - try again.")
+    if reason == "length":
+        if json_mode:       # half a JSON object is not a smaller answer, it is no answer
+            raise LLMTruncated(f"{who}'s answer was cut off before it finished - try again.", partial=text)
+        return text + CUT_MARK
+    return text
 
 
 def parse_json(text):
@@ -30,7 +76,7 @@ def parse_json(text):
                 return json.loads(match.group(0))
             except json.JSONDecodeError:
                 pass
-    raise LLMError("The model returned an answer that was not valid JSON:\n" + text[:500])
+    raise LLMBadFormat("The AI's answer wasn't in the expected format - try again.", raw=text[:2000])
 
 
 def strip_thinking(text):
@@ -67,7 +113,14 @@ def _http(url, payload=None, headers=None, timeout=10, what="the AI service"):
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json", **(headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            body = resp.read().decode("utf-8", "replace")
+        try:
+            reply = json.loads(body)
+        except ValueError:
+            reply = None
+        if not isinstance(reply, dict):
+            raise LLMBadFormat(f"{what} sent a reply that couldn't be read - check the service URL.", raw=body[:2000])
+        return reply
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "replace")
         try:
@@ -82,6 +135,8 @@ def _http(url, payload=None, headers=None, timeout=10, what="the AI service"):
                 429: " - rate limited or out of credit"}.get(e.code, "")
         raise LLMError(f"{what} returned HTTP {e.code}{hint}: {str(detail)[:300]}") from e
     except OSError as e:
+        if isinstance(e, TimeoutError) or "timed out" in str(e):
+            raise LLMError(f"{what} timed out (no answer within {timeout:.0f} s).") from e
         raise LLMError(f"Cannot reach {what} ({e}).") from e
 
 
@@ -122,7 +177,8 @@ class Ollama(BaseClient):
             payload["think"] = False
         reply = self._request("/api/chat", payload, timeout=timeout)
         self._add_usage(reply.get("prompt_eval_count"), reply.get("eval_count"))
-        return strip_thinking(reply.get("message", {}).get("content", ""))
+        text = strip_thinking((reply.get("message") or {}).get("content") or "")
+        return finish(text, "length" if reply.get("done_reason") == "length" else "stop", json_mode, self.label)
 
 
 # Models these services list that can't do text chat (embeddings, images, video, speech...).
@@ -196,5 +252,10 @@ class OpenAICompatible(BaseClient):
         reply = _http(self.base + "/chat/completions", payload, headers=self._headers(), timeout=timeout, what=self.label)
         u = reply.get("usage") or {}
         self._add_usage(u.get("prompt_tokens"), u.get("completion_tokens"))
-        choices = reply.get("choices") or [{}]
-        return strip_thinking((choices[0].get("message") or {}).get("content", ""))
+        choice = (reply.get("choices") or [{}])[0] or {}
+        message = choice.get("message") or {}
+        ended = choice.get("finish_reason")
+        reason = ("blocked" if ended == "content_filter" or message.get("refusal")
+                  else "length" if ended == "length" else "stop")
+        content = message.get("content")
+        return finish(strip_thinking(content if isinstance(content, str) else ""), reason, json_mode, self.label)

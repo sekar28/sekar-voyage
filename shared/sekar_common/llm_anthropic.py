@@ -1,6 +1,6 @@
 """Claude via the official Anthropic Python SDK."""
 
-from .llm import BaseClient, LLMError
+from .llm import BaseClient, LLMError, finish
 
 anthropic = None   # the SDK takes several seconds to import, so it loads on first use (settings only need the lists below)
 
@@ -24,6 +24,7 @@ SUGGESTED = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude
 # Models that accept the server-side refusal fallback ("default" routing).
 FALLBACK_MODELS = ("claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5")
 MAX_TOKENS = 16000     # room for adaptive thinking plus the answer; non-streaming default
+MAX_WAIT = 300.0       # seconds: the longest one request may take, whatever the caller asks for
 
 
 class Claude(BaseClient):
@@ -33,7 +34,7 @@ class Claude(BaseClient):
         super().__init__(model or DEFAULT_MODEL)
         if not api_key:
             raise LLMError("Add your Anthropic API key in AI settings.")
-        self.client = _sdk().Anthropic(api_key=api_key, timeout=300.0)
+        self.client = _sdk().Anthropic(api_key=api_key, timeout=MAX_WAIT)
 
     def models(self):
         try:
@@ -60,9 +61,13 @@ class Claude(BaseClient):
     def chat(self, system, user, json_mode=False, timeout=600, max_tokens=None):
         if json_mode:
             system += "\n\nReply with the JSON object only - no prose and no code fences."
-        params = dict(model=self.model, max_tokens=MAX_TOKENS, system=system,
+        # max_tokens is not the caller's (often small) cap: thinking shares the budget, so a cap sized for the
+        # answer alone would cut the answer off. The caller's timeout does apply, up to MAX_WAIT.
+        wait = min(float(timeout or MAX_WAIT), MAX_WAIT)
+        params = dict(model=self.model, max_tokens=max(MAX_TOKENS, max_tokens or 0), system=system,
                       messages=[{"role": "user", "content": user}],
-                      output_config={"effort": "low"})      # short classification/summarising tasks
+                      output_config={"effort": "low"},      # short classification/summarising tasks
+                      timeout=wait)
         try:
             if self.model in FALLBACK_MODELS:
                 response = self.client.beta.messages.create(
@@ -79,10 +84,13 @@ class Claude(BaseClient):
             raise LLMError("Anthropic rate limit reached - wait a minute and try again.") from e
         except anthropic.APIStatusError as e:
             raise LLMError(f"Anthropic API error ({e.status_code}): {e.message}") from e
+        except anthropic.APITimeoutError as e:           # a kind of connection error, so it is caught first
+            raise LLMError(f"Claude timed out (no answer within {wait:.0f} s).") from e
         except anthropic.APIConnectionError as e:
             raise LLMError("Cannot reach the Anthropic API - check your internet connection.") from e
 
         self._add_usage(response.usage.input_tokens, response.usage.output_tokens)
-        if response.stop_reason == "refusal":
-            raise LLMError("Claude declined this request.")
-        return "".join(b.text for b in response.content if b.type == "text").strip()
+        reason = {"refusal": "blocked", "max_tokens": "length",
+                  "model_context_window_exceeded": "length"}.get(response.stop_reason, "stop")
+        text = "".join(b.text for b in response.content if b.type == "text")
+        return finish(text, reason, json_mode, "Claude")

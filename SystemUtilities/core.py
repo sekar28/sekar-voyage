@@ -128,8 +128,10 @@ def refresh_path(root, path):
         return None
     q = queue.Queue()
     Scanner(path, q).run()
-    while (msg := q.get())[0] != "done":
+    while (msg := q.get())[0] not in ("done", "failed", "cancelled"):
         pass
+    if msg[0] != "done":             # the rescan failed: leave the tree as it was
+        return None
     new = msg[1]
     dsize, dcloud, dfiles = new.size - old.size, new.cloud - old.cloud, new.file_count - old.file_count
     old.dirs, old.files, old.denied = new.dirs, new.files, new.denied
@@ -181,8 +183,18 @@ class Scanner(threading.Thread):
         self.root_path = root_path
         self.q = out_queue
         self.cancelled = False
+        self.error = None                # why the scan failed, if it did
 
     def run(self):
+        """Always ends with one final message: ("done", ...), ("cancelled",) or ("failed", why) - a listener that
+        got none would wait for ever."""
+        try:
+            self._scan()
+        except Exception as e:
+            self.error = str(e) or type(e).__name__
+            self.q.put(("failed", self.error))
+
+    def _scan(self):
         root = Node(self.root_path, None)
         order = [root]
         stack = [(root, self.root_path)]

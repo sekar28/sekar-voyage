@@ -460,7 +460,8 @@ def run_disk_cleanup(target):
     script, out = os.path.join(work, "cleanmgr.ps1"), os.path.join(work, "result.txt")
     with open(script, "w", encoding="utf-8-sig") as f:
         f.write(CLEANMGR_SCRIPT)
-    drivers.run_elevated("powershell.exe", f'-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{script}" -Out "{out}"')
+    drivers.run_elevated("powershell.exe", f'-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{script}" -Out "{out}"',
+                         timeout=45 * 60, what="Disk Cleanup")
     try:
         with open(out, encoding="utf-8-sig") as f:
             status = f.read().strip()
@@ -490,7 +491,9 @@ def send_to_recycle_bin(path):
     if rc != 0 or op.fAnyOperationsAborted:
         raise OSError("Windows could not move it to the Recycle Bin (it may be open in another program)."
                       if rc else "Cancelled.")
-    return not os.path.exists(path)
+    if os.path.exists(path):         # Windows reported no error, yet nothing moved: callers must not count it as freed
+        raise OSError("Windows reported no error, but it is still there - nothing was moved to the Recycle Bin.")
+    return True
 
 
 def free_up_space(folder):

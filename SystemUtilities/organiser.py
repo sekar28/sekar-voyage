@@ -170,7 +170,10 @@ def ai_organise(llm, profile):
     for key in ("structure", "moves", "issues", "tips"):
         if not isinstance(data.get(key), list):
             data[key] = []
-    data["summary"] = str(data.get("summary", ""))
+    data["summary"] = str(data.get("summary") or "")
+    if not (data["summary"].strip() or data["structure"] or data["moves"] or data["issues"]):
+        # A plan with nothing in it is a failed answer. Passed on, it would read as "already organised".
+        raise RuntimeError("The AI's plan came back empty - try again, or turn AI off to use the built-in rules.")
     return data
 
 

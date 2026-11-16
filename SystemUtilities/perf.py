@@ -425,7 +425,8 @@ def purge_standby():
     with open(script, "w", encoding="utf-8-sig") as f:
         f.write(PURGE_SCRIPT)
     before = sysinfo.live()
-    drivers.run_elevated("powershell.exe", f'-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{script}" -Out "{out}"')
+    drivers.run_elevated("powershell.exe", f'-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{script}" -Out "{out}"',
+                         timeout=5 * 60, what="The memory clean")
     try:
         with open(out, encoding="utf-8-sig") as f:
             status = f.read().strip()
@@ -519,7 +520,8 @@ def set_startup(item_id, enabled):
         with winreg.CreateKeyEx(hive, f"{APPROVED}\\{sub}", 0, winreg.KEY_SET_VALUE) as k:
             winreg.SetValueEx(k, name, 0, winreg.REG_BINARY, data)
     else:
-        drivers.run_elevated("reg.exe", f'add "HKLM\\{APPROVED}\\{sub}" /v "{name}" /t REG_BINARY /d {data.hex()} /f')
+        drivers.run_elevated("reg.exe", f'add "HKLM\\{APPROVED}\\{sub}" /v "{name}" /t REG_BINARY /d {data.hex()} /f',
+                             timeout=60, what="The startup change")
         if _approved(hive, sub, name) != enabled:
             raise RuntimeError("Windows didn't save the change.")
     return {"id": item_id, "enabled": _approved(hive, sub, name)}
