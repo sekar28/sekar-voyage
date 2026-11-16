@@ -176,6 +176,9 @@ certificate: run `certmgr.msc` and delete *Sekar's Voyage* from **Trusted Root C
   installer with a self-signed code-signing certificate from your Windows user store (created on the first run),
   and writes everything to `packaging\Output\`. Release builds use a PyInstaller bootloader compiled from source,
   which antivirus tools flag less often.
+- **Run the tests:** `python -m unittest discover -s tests` from this folder. They cover logic only (what Jarvis
+  counts as a yes, which folders are personal, how a cut-off or refused AI reply is handled) and need no network,
+  API key or Windows.
 
 ## Licence
 
