@@ -32,6 +32,33 @@ YES = re.compile(r"^(yes|yeah|yep|yup|sure|ok(ay)?|go ahead|do it|please do|conf
                  r"delete (it|them)|remove (it|them)|go for it|sounds good|alright|of course|right|correct)\b", re.I)
 NO = re.compile(r"^(no|nope|nah|don'?t|do not|cancel|stop|never ?mind|not now|leave (it|them)|skip( it)?|keep (it|them))\b", re.I)
 REVIEW = re.compile(r"^(show( me)?|review|let me (see|check|look)|open( it)?|details|which (ones|files)|what are they)\b", re.I)
+FILLER = re.compile(r"^(please|thanks|thank you|jarvis|and|then|now)\b", re.I)      # may sit beside a yes
+LINK = re.compile(r"^((but|and|just|first|please|then|wait)\b[ ,]*)+", re.I)       # "ok, but first show me"
+_SEP = " ,.!;:-"
+
+
+def answer_kind(text):
+    """How a reply to a waiting question reads: "yes", "no", "review", "unclear" or None (not an answer at all).
+
+    A yes runs the prepared change, so it must be the whole reply ("yes", "ok, go ahead please"). A reply that
+    only starts like a yes is a review if it asks to see the items ("ok, show me the files first"), and unclear
+    otherwise ("yes, but don't delete the bills") - unclear changes nothing and asks again."""
+    t = (text or "").strip().lower()
+    lead = YES.match(t) or NO.match(t)
+    rest = LINK.sub("", t[lead.end():].lstrip(_SEP)) if lead else t
+    if REVIEW.match(rest):
+        return "review"
+    if NO.match(t):
+        return "no"
+    if not YES.match(t):
+        return None
+    rest = t
+    while rest:
+        m = YES.match(rest) or FILLER.match(rest)
+        if not m:
+            return "unclear"
+        rest = rest[m.end():].lstrip(_SEP)
+    return "yes"
 
 
 def fmt(n):
@@ -228,12 +255,15 @@ class Agent:
             self._set_pending(None)
             p = None
         if p:
-            if YES.search(text):
+            kind = answer_kind(text)
+            if kind == "yes":
                 return self.confirm(source="voice")
-            if NO.search(text):
+            if kind == "no":
                 return self.decline()
-            if REVIEW.search(text):
+            if kind == "review":
                 return self.review()
+            if kind == "unclear":        # started like a yes but said more: change nothing, keep the question waiting
+                return Reply("I'm not sure that was a yes, so I haven't done anything. Say yes, no, or show me.", p)
         elif YES.fullmatch(text.strip(" .!")) or NO.fullmatch(text.strip(" .!")):
             return Reply("There's nothing waiting for an answer right now.")
         intent, args = self._intent(text)
@@ -772,11 +802,12 @@ class Agent:
         if not p or p.expired():
             self._set_pending(None)
             return Reply("There's nothing waiting for a yes right now.")
+        if self.job:                     # nothing ran, so the question stays and no "yes" is learned from it
+            p.created = time.time()
+            return Reply(f"I'm still busy: {self.job.lower()}. Your question is still waiting - say yes again when I'm done.")
         self._set_pending(None)
         for cat in p.categories:
             self.mem.record(p.kind, cat, "yes", len(p.items), p.question)
-        if self.job:
-            return Reply(f"I'm still busy: {self.job.lower()}. Ask me again when it's done.")
         self.job = "Carrying that out"
 
         def work():
