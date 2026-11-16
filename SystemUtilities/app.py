@@ -695,10 +695,14 @@ class Api:
         return self._need_agent().ask(text, "panel")
 
     @safe
-    def agent_answer(self, answer):
-        """Yes / No / Review buttons on the assistant's question."""
+    def agent_answer(self, answer, pending_id=None):
+        """Yes / No / Review buttons on the assistant's question. pending_id: the question the buttons were shown
+        under - an answer to a question that has since changed does nothing."""
         a = self._need_agent()
-        r = {"yes": lambda: a.confirm("click"), "no": a.decline, "review": a.review}[answer]()
+        if not pending_id:
+            raise RuntimeError("That answer didn't say which question it was for, so nothing was done.")
+        pid = str(pending_id)
+        r = {"yes": lambda: a.confirm("click", pid), "no": lambda: a.decline(pid), "review": lambda: a.review(pid)}[answer]()
         a._line("jarvis", r.say)
         return {"say": r.say}
 

@@ -8,6 +8,7 @@ gets a "delete" tool, so whatever it answers, nothing destructive can happen wit
 
 import os
 import re
+import secrets
 import shutil
 import sys
 import threading
@@ -91,12 +92,13 @@ class Pending:
         self.category, self.categories = category, categories or ([category] if category else [""])
         self.review = review or {}
         self.created = time.time()
+        self.id = secrets.token_hex(4)       # a button click names the question it answers
 
     def expired(self):
         return time.time() - self.created > PENDING_TTL
 
     def public(self):
-        return {"kind": self.kind, "question": self.question, "count": len(self.items),
+        return {"id": self.id, "kind": self.kind, "question": self.question, "count": len(self.items),
                 "items": [str(i)[:200] for i in self.items[:40]], "review": self.review}
 
 
@@ -797,7 +799,21 @@ class Agent:
         return Reply(say)
 
     # ------------------------------------------------------------ confirming
-    def confirm(self, source="click"):
+    def _stale(self, pid):
+        """A click carries the id of the question it was shown. If another question (or none) is waiting now,
+        the click answers nothing: returns the reply to give, else None. Voice answers pass no id."""
+        p = self.pending if self.pending and not self.pending.expired() else None
+        if pid is None or (p and p.id == pid):
+            return None
+        self._ui("agent_pending", p.public() if p else None)      # show what is really waiting
+        if p:
+            return Reply(f"That question changed before your answer arrived, so I haven't done anything. Now: {p.question}")
+        return Reply("That question is no longer waiting, so I haven't done anything.")
+
+    def confirm(self, source="click", pid=None):
+        stale = self._stale(pid)
+        if stale:
+            return stale
         p = self.pending
         if not p or p.expired():
             self._set_pending(None)
@@ -820,7 +836,10 @@ class Agent:
         threading.Thread(target=work, daemon=True).start()
         return Reply("On it.")
 
-    def decline(self):
+    def decline(self, pid=None):
+        stale = self._stale(pid)
+        if stale:
+            return stale
         p = self.pending
         self._set_pending(None)
         if p:
@@ -830,7 +849,10 @@ class Agent:
                 return Reply(f"OK, I'll leave them. I won't suggest deleting {content.CATEGORIES[p.categories[0]][0].lower()} again.")
         return Reply("OK, I'll leave everything as it is.")
 
-    def review(self):
+    def review(self, pid=None):
+        stale = self._stale(pid)
+        if stale:
+            return stale
         p = self.pending
         if not p:
             return Reply("There's nothing to review right now.")

@@ -3064,7 +3064,7 @@ function renderAgentStatus() {
   box.innerHTML = `<b>${esc(p.question)}</b>
     ${p.items.length ? `<details><summary>${num(p.count)} item${p.count === 1 ? '' : 's'}</summary><ul>${p.items.map(i => `<li>${esc(i)}</li>`).join('')}
       ${p.count > p.items.length ? `<li>… and ${num(p.count - p.items.length)} more</li>` : ''}</ul></details>` : ''}
-    <div class="agent-btns"><button class="btn clean sm" data-ans="yes">${icon('checkmark')}Yes</button>
+    <div class="agent-btns" data-pid="${esc(p.id)}"><button class="btn clean sm" data-ans="yes">${icon('checkmark')}Yes</button>
       <button class="btn sm" data-ans="no">No</button>${p.review && p.review.view ? `<button class="btn sm" data-ans="review">${icon('eye')}Review</button>` : ''}</div>`;
 }
 
@@ -3165,7 +3165,8 @@ $('#agentForm').addEventListener('submit', e => {
 $('#agentPending').addEventListener('click', async e => {
   const b = e.target.closest('[data-ans]');
   if (!b) return;
-  try { await Bridge.call('agent_answer', b.dataset.ans); } catch (err) { fail(err); }
+  // the id says which question these buttons were drawn for, so a click can't answer one that replaced it
+  try { await Bridge.call('agent_answer', b.dataset.ans, b.closest('[data-pid]').dataset.pid); } catch (err) { fail(err); }
 });
 $('#agentMonitor').addEventListener('change', e => Bridge.call('agent_settings', e.target.checked, null).catch(fail));
 $('#agentStartup').addEventListener('change', e => Bridge.call('agent_settings', null, e.target.checked)
