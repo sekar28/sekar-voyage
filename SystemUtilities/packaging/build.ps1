@@ -1,4 +1,4 @@
-# Builds and signs the installer:  powershell -ExecutionPolicy Bypass -File build.ps1 [-Version 1.0.1]
+# Builds and signs the installer:  powershell -ExecutionPolicy Bypass -File build.ps1 [-Version 1.0.2]
 # Output: packaging\Output\  (SystemUtilities-Setup-<version>.exe, the public .cer and Trust-Certificate.ps1)
 # Needs: pip install pyinstaller, Inno Setup 6. The signing certificate is self-signed and lives in your Windows
 # user store (Cert:\CurrentUser\My); it's created on the first build. Its private key never leaves this PC.

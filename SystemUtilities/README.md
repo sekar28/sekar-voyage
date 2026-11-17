@@ -40,7 +40,7 @@ have.
 2. **Check the download** (optional, recommended). In PowerShell, in that folder:
 
    ```powershell
-   Get-FileHash .\SystemUtilities-Setup-1.0.1.exe
+   Get-FileHash .\SystemUtilities-Setup-1.0.2.exe
    ```
 
    The result must match the SHA-256 listed on the release page. If it doesn't, delete the file.
@@ -171,7 +171,7 @@ certificate: run `certmgr.msc` and delete *Sekar's Voyage* from **Trusted Root C
   `voice.py` / `voice_host.py` / `tts.py` / `bell.py` (voice), `llm.py` / `llm_anthropic.py` (AI providers).
   `llm.py`, `llm_anthropic.py`, `secrets_store.py`, `bell.py` and `voice.py` are small aliases for
   [`../shared/sekar_common`](../shared/sekar_common).
-- **Build the installer:** `packaging\build.ps1 -Version 1.0.1` (needs PyInstaller and Inno Setup 6). It bundles the
+- **Build the installer:** `packaging\build.ps1 -Version 1.0.2` (needs PyInstaller and Inno Setup 6). It bundles the
   app, runs `tools/check_release.py` (fails if personal data, model files or Piper would ship), signs the .exe and the
   installer with a self-signed code-signing certificate from your Windows user store (created on the first run),
   and writes everything to `packaging\Output\`. Release builds use a PyInstaller bootloader compiled from source,

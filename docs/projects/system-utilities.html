@@ -17,7 +17,7 @@
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Why I built System Utilities", "description": "How one full disk turned into System Utilities, an open-source Windows PC care app with AI features and a chat assistant called Jarvis.", "datePublished": "2026-10", "dateModified": "2026-11-08", "inLanguage": "en", "author": {"@type": "Person", "name": "Sekar"}, "publisher": {"@type": "Organization", "name": "Sekar's Voyage"}}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Why I built System Utilities", "description": "How one full disk turned into System Utilities, an open-source Windows PC care app with AI features and a chat assistant called Jarvis.", "datePublished": "2026-10", "dateModified": "2026-11-17", "inLanguage": "en", "author": {"@type": "Person", "name": "Sekar"}, "publisher": {"@type": "Organization", "name": "Sekar's Voyage"}}</script>
   <link rel="stylesheet" href="../styles.css?v=6">
   <script>(function(){try{var t=localStorage.getItem("theme");if(!t&&matchMedia("(prefers-color-scheme: dark)").matches)t="dark";if(t)document.documentElement.dataset.theme=t}catch(e){}document.documentElement.classList.add("js")})()</script>
   <script src="../site.js?v=4" defer></script>
@@ -57,7 +57,7 @@
           <p class="meta">By Sekar &middot; October 2026 &middot; Updated November 2026 &middot; 7 min read</p>
           <p class="standfirst">It started with a full disk. It ended with a small open-source PC care app and an AI assistant that can answer questions about the machine.</p>
           <dl class="glance" data-reveal>
-            <div><dt>Latest version</dt><dd>1.0.1, released 3 November 2026</dd></div>
+            <div><dt>Latest version</dt><dd>1.0.2, released 17 November 2026</dd></div>
             <div><dt>Platform</dt><dd>Windows 10 and 11</dd></div>
             <div><dt>Installer</dt><dd>About 25 MB. No Python needed</dd></div>
             <div><dt>Licence</dt><dd>MIT, open source</dd></div>
@@ -137,6 +137,10 @@
 
           <p>Python programs packed into a single file are sometimes flagged by antivirus tools by mistake. If that happens, compare the checksum with the release page. If it matches, it is a false positive; if it does not, delete the file. The release builds use a bootloader I compiled from source, which antivirus tools flag less often.</p>
 
+          <h2>Version 1.0.2: straighter answers</h2>
+
+          <p>Version 1.0.2, released on 17 November 2026, is a reliability update. Jarvis now says &ldquo;Done&rdquo; only when the job really finished, and a check that failed is no longer reported as all clear. Scans and administrator tasks have a time limit instead of waiting forever. An AI reply that was cut off or refused is treated as an error, not as a result. You install it the same way as 1.0.1, and it replaces the older version.</p>
+
           <h2>Share it, change it</h2>
 
           <p>What began as a fix for one full disk is now a complete PC care package. I'm sharing it as an open-source project, so anyone can look at how it works, try it, and change it to suit them. Deletions go to the Recycle Bin where possible, Windows and program folders are protected, and nothing is closed, deleted, moved, or installed without your confirmation.</p>
@@ -147,8 +151,8 @@
 
         <div class="article-footer" data-reveal>
           <h2>Get it</h2>
-          <p>System Utilities is free and open-source under the MIT licence, for Windows 10 and 11. The latest version is 1.0.1, released on 3 November 2026.</p>
-          <a class="download" href="https://github.com/sekar28/sekar-voyage/releases/latest" rel="noopener">Download version 1.0.1</a>
+          <p>System Utilities is free and open-source under the MIT licence, for Windows 10 and 11. The latest version is 1.0.2, released on 17 November 2026.</p>
+          <a class="download" href="https://github.com/sekar28/sekar-voyage/releases/latest" rel="noopener">Download version 1.0.2</a>
           <p class="more-links"><a href="https://github.com/sekar28/sekar-voyage/tree/main/SystemUtilities" rel="noopener">Source code on GitHub</a> &middot; <a href="https://github.com/sekar28/sekar-voyage/blob/main/SystemUtilities/docs/HELP.md" rel="noopener">User guide</a></p>
         </div>
 
