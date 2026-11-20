@@ -345,6 +345,12 @@ def share_url() -> str:
     return f"http://{socket.gethostname()}.local:{PORT}/d/{CONFIG.token}/api/upload"
 
 
+def share_ip_urls() -> list[str]:
+    """The same upload address by IP: a fallback where the laptop's name does not resolve."""
+    with _addr_lock:
+        return [f"http://{a['ip']}:{PORT}/d/{CONFIG.token}/api/upload" for a in _addresses]
+
+
 def refresh_addresses_forever() -> None:
     global _addresses
     while True:
@@ -352,6 +358,7 @@ def refresh_addresses_forever() -> None:
         with _addr_lock:
             _addresses = found
         TLS.update([a["ip"] for a in found])
+        FIREWALL.check([a["ip"] for a in found if not a.get("hotspot")])
         time.sleep(30)
 
 
@@ -498,6 +505,73 @@ def find_uxplay() -> Path:
     return Path(found) if found else default
 
 
+# ---------------------------------------------------------------- Windows Firewall check
+
+_FW_SCRIPT = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+$cats = @(foreach ($ip in $env:LAPDROP_IPS.Split(',')) { if ($ip) {
+  Get-NetIPAddress -IPAddress $ip | Get-NetConnectionProfile | ForEach-Object { $_.NetworkCategory.ToString() } } }) | Select-Object -Unique
+$on = @(Get-NetFirewallProfile | Where-Object Enabled | ForEach-Object { $_.Name })
+$rules = @(Get-NetFirewallApplicationFilter -Program $env:LAPDROP_EXE | Get-NetFirewallRule |
+  Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' } |
+  ForEach-Object { @{ a = $_.Action.ToString(); p = $_.Profile.ToString() } })
+@{ cats = @($cats); on = $on; rules = $rules } | ConvertTo-Json -Compress -Depth 3
+"""
+
+
+class Firewall:
+    """Read-only check: does Windows Firewall let phones reach this program on the
+    network type (Private / Public / Domain) the laptop is on now?
+
+    Windows asks once, the first time a program listens. If that answer covered only
+    Public (or nothing), a Private home Wi-Fi blocks every phone silently and nothing
+    shows in the log (seen 2026-11-20). LapDrop never changes the rules itself; it shows
+    a warning with a button to Windows' allowed-apps page.
+    """
+
+    def __init__(self) -> None:
+        self.blocked: list[str] = []      # network types where LapDrop is blocked right now
+
+    def check(self, ips: list[str]) -> None:
+        if os.name != "nt" or not ips:
+            self.blocked = []
+            return
+        env = dict(os.environ, LAPDROP_IPS=",".join(ips), LAPDROP_EXE=sys.executable)
+        try:
+            run = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", _FW_SCRIPT],
+                capture_output=True, text=True, timeout=40, env=env,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            data = json.loads(run.stdout.strip() or "{}")
+        except (OSError, subprocess.SubprocessError, ValueError):
+            return                        # can't tell: keep the last answer, show no false alarm
+        fix = {"DomainAuthenticated": "Domain"}
+        cats = [fix.get(c, c) for c in data.get("cats") or []]
+        on = set(data.get("on") or [])
+        rules = data.get("rules") or []
+
+        def covers(rule: dict, cat: str) -> bool:
+            p = rule.get("p", "")
+            return p == "Any" or cat in [x.strip() for x in p.split(",")]
+
+        blocked = []
+        for cat in cats:
+            if cat not in on:
+                continue                  # the firewall is off for this network type
+            allow = any(r.get("a") == "Allow" and covers(r, cat) for r in rules)
+            block = any(r.get("a") == "Block" and covers(r, cat) for r in rules)
+            if block or not allow:
+                blocked.append(cat)
+        self.blocked = blocked
+
+    def status(self) -> dict:
+        return {"blocked": self.blocked, "program": Path(sys.executable).name}
+
+
+FIREWALL = Firewall()
+
+
 UXPLAY = find_uxplay()
 UXPLAY_LOG = CONFIG_DIR / "uxplay.log"
 
@@ -599,6 +673,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def fail(self, status: int, message: str) -> None:
         self.close_connection = True      # the request body may be unread
+        log(f"{self.client_address[0]} refused ({status}): {message}")
         self.send_json({"error": message}, status)
 
     def send_ui(self, name: str) -> None:
@@ -680,22 +755,42 @@ class Handler(BaseHTTPRequestHandler):
                             raise ConnectionError("upload stopped early")
                         out.write(buf)
                 else:
-                    # Part headers, then the file bytes up to the closing boundary line.
-                    buf = b""
-                    while b"\r\n\r\n" not in buf:
+                    # Skip any text fields until the part that holds a file, then stream that
+                    # part's bytes up to the next boundary line. (An iPhone Shortcut may put
+                    # other fields first, so the file is not always the first part.)
+                    end = b"\r\n--" + boundary
+                    buf = b"\r\n"                    # lets the first boundary match `end` too
+                    while end not in buf:            # preamble before the first part
                         data = more()
                         if not data or len(buf) > 65536:
                             raise ValueError("bad form upload")
                         buf += data
-                    head, buf = buf.split(b"\r\n\r\n", 1)
-                    head_text = head.decode("utf-8", "replace")
-                    found = re.search(r'filename="([^"]*)"', head_text)
-                    if not found:
-                        raise ValueError("the form has no file")
-                    name = name or found.group(1)
+                    buf = buf.split(end, 1)[1]
+                    while True:
+                        while b"\r\n\r\n" not in buf and not buf.startswith(b"--"):
+                            data = more()
+                            if not data or len(buf) > 65536:
+                                raise ValueError("bad form upload")
+                            buf += data
+                        if buf.startswith(b"--"):    # closing boundary: no part had a file
+                            raise ValueError('the form has no file field (add a File field named "file")')
+                        head, buf = buf.split(b"\r\n\r\n", 1)
+                        head_text = head.decode("utf-8", "replace")
+                        found = (re.search(r"(?i)filename\*=(?:utf-8'[^']*')?([^;\r\n]+)", head_text)
+                                 or re.search(r'(?i)filename="([^"]*)"', head_text)
+                                 or re.search(r"(?i)filename=([^;\r\n]+)", head_text))
+                        if found or re.search(r'(?i)name="file"', head_text):
+                            break
+                        while end not in buf:        # a text field: skip to the next part
+                            data = more()
+                            if not data:
+                                raise ValueError("bad form upload")
+                            buf = buf[-(len(end) - 1):] + data
+                        buf = buf.split(end, 1)[1]
+                    if found:
+                        name = name or urllib.parse.unquote(found.group(1).strip().strip('"'))
                     found = re.search(r"(?im)^content-type:\s*(\S+)", head_text)
                     ctype = found.group(1) if found else ""
-                    end = b"\r\n--" + boundary
                     while True:
                         at = buf.find(end)
                         if at >= 0:
@@ -761,6 +856,9 @@ class Handler(BaseHTTPRequestHandler):
                     "save_dir": str(CONFIG.save_dir),
                     "addresses": addresses(),
                     "mirror": MIRROR.status(),
+                    "share_url": share_url(),
+                    "share_ip_urls": share_ip_urls(),
+                    "firewall": FIREWALL.status(),
                     "chat_name": CONFIG.chat_name,
                     "startup": startup_enabled(),
                     "received": list_files(CONFIG.save_dir),
@@ -791,6 +889,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({
                     "host": socket.gethostname(),
                     "share_url": share_url(),
+                    "share_ip_urls": share_ip_urls(),
                     "outbox": list_files(OUTBOX),
                     "notes": NOTES.snapshot(),
                 })
@@ -841,6 +940,9 @@ class Handler(BaseHTTPRequestHandler):
                 CONFIG.new_token()
             elif rest == "mirror":
                 MIRROR.start() if data.get("on") else MIRROR.stop()
+            elif rest == "firewall-settings":
+                # Control Panel > Windows Defender Firewall > Allowed apps (no admin needed to look)
+                subprocess.Popen(["control.exe", "/name", "Microsoft.WindowsFirewall", "/page", "pageConfigureApps"])
             elif rest == "hotspot-settings":
                 os.startfile("ms-settings:network-mobilehotspot")  # noqa: S606 - Windows Settings page
             elif rest == "remove":
@@ -889,7 +991,11 @@ class DualServer(Server):
         request.settimeout(20)
         secure = None
         if request.recv(1, socket.MSG_PEEK) == b"\x16":
-            secure = self.context.wrap_socket(request, server_side=True)
+            context = self.context or TLS.context      # the main port borrows the https certificate
+            if context is None:
+                log(f"{client_address[0]} https request before the certificate was ready")
+                return
+            secure = context.wrap_socket(request, server_side=True)
         try:
             self.RequestHandlerClass(secure or request, client_address, self)
         finally:
@@ -912,7 +1018,8 @@ def main() -> int:
     local = f"http://127.0.0.1:{PORT}/"
 
     try:
-        server = Server(("0.0.0.0", PORT), Handler)
+        # Dual too: an https link typed with port 8765 (seen from an iPhone Shortcut) still answers.
+        server = DualServer(("0.0.0.0", PORT), Handler)
     except OSError:
         # Most likely LapDrop is already running: just show it.
         if not args.headless:

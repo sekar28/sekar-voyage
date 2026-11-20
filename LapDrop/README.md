@@ -29,16 +29,18 @@ It works with any phone, tablet or computer that has a browser: iPhone, iPad, An
 
 No Python needed. About 14 MB, installs for your user only, without administrator rights.
 
-1. Open the [LapDrop release](https://github.com/sekar28/sekar-voyage/releases/tag/lapdrop-v1.0.0) and download into
-   **one folder**: `LapDrop-Setup-1.0.0.exe`, `SekarsVoyage-CodeSigning.cer` and `Trust-Certificate.ps1`.
-2. **Check the download** (recommended): `Get-FileHash .\LapDrop-Setup-1.0.0.exe` in PowerShell must print the
+1. Open the [LapDrop release](https://github.com/sekar28/sekar-voyage/releases/tag/lapdrop-v1.0.1) and download into
+   **one folder**: `LapDrop-Setup-1.0.1.exe`, `SekarsVoyage-CodeSigning.cer` and `Trust-Certificate.ps1`.
+2. **Check the download** (recommended): `Get-FileHash .\LapDrop-Setup-1.0.1.exe` in PowerShell must print the
    SHA-256 shown on the release page.
 3. **Trust the publisher** (once per PC, optional; the same certificate as my other apps): right-click
    `Trust-Certificate.ps1` → **Run with PowerShell**, then click **Yes** in the Windows warning.
 4. **Run the installer.** If SmartScreen says *"Windows protected your PC"*, click **More info → Run anyway** (the
    certificate is self-made, so Microsoft doesn't know it yet). Tick *Start LapDrop when Windows starts* if you want.
-5. The first time a phone connects, **Windows Firewall** may ask whether LapDrop can use the network. Allow it on
-   **Private** networks (your home Wi-Fi).
+5. **Windows Firewall:** the installer's option *Allow LapDrop through Windows Firewall on home (Private) networks*
+   (ticked by default) asks once for administrator approval and adds the rule. Public networks stay blocked. If you
+   skip it, Windows asks the first time LapDrop starts: tick **Private networks**. If phones still can't connect,
+   LapDrop shows a red **Windows Firewall is blocking phones** box with a button to the settings.
 
 > **Antivirus note:** Python apps packed into an .exe are sometimes flagged by machine-learning detections. Compare
 > the SHA-256 with the release page. If it matches, it's a false positive; please report it at
@@ -58,9 +60,22 @@ Tips: add the phone page to your home screen; the link keeps working while the l
 
 ## iPhone Share menu
 
-The phone page has **Add LapDrop to the Share menu** with step-by-step instructions. In short: in the Shortcuts app,
-make a shortcut that receives files from the Share sheet and sends them with **Get Contents of URL** (method POST,
-form field `file`) to the address shown on that page. After that, **Share → LapDrop** sends straight to the laptop.
+A one-time setup on the iPhone or iPad. The same steps, with the address to copy, are in the laptop window
+(*Send from the iPhone's Share menu*) and on the phone page (*Add LapDrop to the Share menu*).
+
+1. Copy the **Share-menu address** shown there. It looks like
+   `http://<laptop-name>.local:8765/d/<code>/api/upload`: **http**, port **8765**. Don't use the QR link (https, port
+   8443): the Shortcuts app refuses LapDrop's self-made certificate.
+2. In **Shortcuts**, tap **+** and name the shortcut **LapDrop**.
+3. Tap **i** and switch on **Show in Share Sheet**; let it receive Images, Files and Media (or Any).
+4. Add **Repeat with Each** with **Shortcut Input** as its input.
+5. Inside the repeat, add **Get Contents of URL** and paste the address.
+6. In that action's options: **Method** = POST, **Request Body** = **Form**.
+7. **Add new field → File**, key **`file`**, value **Repeat Item**.
+8. Tap **Done**. In Photos, **Share → LapDrop**. Allow local-network access the first time.
+
+If the phone can't connect, the laptop's name may not resolve on that network: use the IP-address version shown just
+below (it changes when the laptop's address does). **New code** changes both addresses, so update the shortcut after it.
 
 ## No Wi-Fi
 
@@ -92,9 +107,9 @@ clone UxPlay and build it with CMake (see UxPlay's README). Allow `uxplay.exe` i
 
 | Problem | Try |
 |---|---|
-| The phone can't open the page | Same Wi-Fi? Allow LapDrop in Windows Firewall (Private). A VPN on the laptop (e.g. NordVPN) can block local devices unless its local-network option is on |
+| The phone can't open the page | Same Wi-Fi? Windows Firewall must allow `LapDrop.exe` on the network's type: Start → *Allow an app through Windows Firewall* → Change settings → tick **Private** (home) for LapDrop.exe. A rule that covers only Public blocks a home network silently. A VPN on the laptop (NordVPN, ExpressVPN…) can also block local devices unless its local-network option is on |
+| Share-menu shortcut fails | Use the **http** address with port **8765** (not the https QR link); the form needs a **File** field named `file`. The reason for a refused upload is written in `%APPDATA%\LapDrop\lapdrop.log` |
 | "Connection not private" | Expected the first time; continue anyway, or use the plain http link |
-| Share menu shortcut fails | Shortcuts uses the plain http address with the laptop's name (`<name>.local`). Check the phone and laptop are on the same network |
 | HTTPS link missing just after start | It appears about 10 seconds after LapDrop starts |
 
 ## From source

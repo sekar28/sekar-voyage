@@ -1,6 +1,6 @@
 ; Inno Setup script for LapDrop. Built by build.ps1 (which passes /DSourceDir and /DAppVersion).
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.0.1"
 #endif
 
 [Setup]
@@ -30,6 +30,9 @@ CloseApplications=yes
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "startup"; Description: "Start LapDrop when Windows starts (window minimised)"; GroupDescription: "Start-up:"; Flags: unchecked
+; Phones connect in, so Windows Firewall must allow LapDrop. Private (home) networks only; Public stays blocked.
+; Adding the rule needs administrator rights: Windows asks once, and setup goes on if you say no.
+Name: "firewall"; Description: "Allow LapDrop through Windows Firewall on home (Private) networks (asks for administrator approval)"; GroupDescription: "Network:"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -46,6 +49,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "LapDrop"; Flags: uninsdeletevalue dontcreatekey
 
 [Run]
+; One elevated call: drop our old rule (if any), then add it for this install folder, Private networks only.
+Filename: "{cmd}"; Parameters: "/c netsh advfirewall firewall delete rule name=""LapDrop"" >nul 2>&1 & netsh advfirewall firewall add rule name=""LapDrop"" dir=in action=allow program=""{app}\LapDrop.exe"" profile=private enable=yes"; Verb: "runas"; Flags: runhidden shellexec waituntilterminated; Tasks: firewall; StatusMsg: "Allowing LapDrop on home networks in Windows Firewall..."
 Filename: "{app}\LapDrop.exe"; Description: "{cm:LaunchProgram,LapDrop}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]

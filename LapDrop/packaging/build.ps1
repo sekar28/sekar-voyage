@@ -4,7 +4,7 @@
 # Signing uses the same self-signed certificate as Sekar's System Utilities (Cert:\CurrentUser\My,
 # created on first use). Its private key never leaves this PC. Adapted from the System Utilities build script.
 # The version is also written in version_info.txt: change both.
-param([string]$Version = "1.0.0")
+param([string]$Version = "1.0.1")
 $ErrorActionPreference = "Stop"
 $here = $PSScriptRoot
 $build = Join-Path $env:TEMP "LapDrop-build"                    # outside OneDrive, so build files don't sync

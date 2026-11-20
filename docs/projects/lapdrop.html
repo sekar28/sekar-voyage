@@ -57,7 +57,7 @@
           <p class="meta">By Sekar &middot; November 2026 &middot; 6 min read</p>
           <p class="standfirst">I only wanted to get photos from my iPhone onto my Windows laptop. There is no AirDrop on Windows, so I built my own: scan a QR code, send files of any size, and nothing leaves the local network.</p>
           <dl class="glance" data-reveal>
-            <div><dt>Version</dt><dd>1.0.0, released 20 November 2026</dd></div>
+            <div><dt>Version</dt><dd>1.0.1, released 20 November 2026</dd></div>
             <div><dt>Laptop</dt><dd>Windows 10 and 11</dd></div>
             <div><dt>Phone</dt><dd>Any browser: iPhone, iPad, Android, Mac, Linux, another PC</dd></div>
             <div><dt>Installer</dt><dd>About 14 MB. No Python, no admin rights</dd></div>
@@ -116,7 +116,7 @@
 
           <h2>Right in the iPhone Share menu</h2>
 
-          <p>Opening a web page every time is fine, but sharing should be one tap. The phone page has step-by-step instructions to make an iPhone Shortcut once. After that, LapDrop sits in the Share menu of Photos, Files and every other app: <em>Share &rarr; LapDrop</em>, and the file is on the laptop.</p>
+          <p>Opening a web page every time is fine, but sharing should be one tap. The LapDrop window and the phone page both have step-by-step instructions, with the exact address to paste, to make an iPhone Shortcut once. After that, LapDrop sits in the Share menu of Photos, Files and every other app: <em>Share &rarr; LapDrop</em>, and the file is on the laptop.</p>
 
           <figure class="post-figure narrow" data-reveal>
             <img src="../images/lapdrop-share-1120.webp" srcset="../images/lapdrop-share-560.webp 560w, ../images/lapdrop-share-1120.webp 1120w" sizes="(min-width: 560px) 520px, 100vw" alt="iPhone Share menu with Lap drop as the last action" width="1120" height="1094" loading="lazy" decoding="async">
@@ -132,6 +132,12 @@
           <h2>Not just for iPhone</h2>
 
           <p>It started with an iPhone, but nothing in LapDrop is tied to one. Any device with a browser on the same network can use it: an Android phone, an iPad, a Mac, a Linux machine, or another Windows PC. That makes it a simple way to move files around a home or office LAN without a USB stick.</p>
+
+          <h2>Version 1.0.1: fixes from real use</h2>
+
+          <p>The first real test of the Share menu failed, and the log showed why. The shortcut had been given an https address on the plain-http port, and the Shortcuts app sent the file in a form whose first field was not the file. Version 1.0.1 accepts both: either port answers http and https, and LapDrop looks for the file in any field of the form. The full Share-menu steps are now in the laptop window too, with a backup address that uses the laptop's IP instead of its name.</p>
+
+          <p>The other surprise was Windows Firewall. Windows asks once whether a program may accept connections, and that answer was saved for Public networks only. My home Wi-Fi is a Private network, so every phone was turned away without a trace. The installer now offers to allow LapDrop on home (Private) networks, and the app shows a red warning with a button to the right settings if the firewall is still in the way.</p>
 
           <h2>Safe by design</h2>
 
@@ -155,7 +161,7 @@
         <div class="article-footer" data-reveal>
           <h2>Get it</h2>
           <p>LapDrop is free and open source under the MIT licence. The installer is about 14 MB for Windows 10 and 11, installs for your own account without administrator rights, and is signed with the same self-made certificate as my other apps. If SmartScreen warns you, choose <em>More info</em>, then <em>Run anyway</em>; the release page has the checksum and the certificate.</p>
-          <a class="download" href="https://github.com/sekar28/sekar-voyage/releases/tag/lapdrop-v1.0.0" rel="noopener">Download version 1.0.0</a>
+          <a class="download" href="https://github.com/sekar28/sekar-voyage/releases/tag/lapdrop-v1.0.1" rel="noopener">Download version 1.0.1</a>
           <p class="more-links"><a href="https://github.com/sekar28/sekar-voyage/tree/main/LapDrop" rel="noopener">Source code on GitHub</a> &middot; <a href="https://github.com/sekar28/sekar-voyage/blob/main/LapDrop/README.md" rel="noopener">Install and use</a></p>
         </div>
 

@@ -50,16 +50,20 @@
         <li>Copy this address:
           <div class="url" id="shareUrl"></div>
           <button class="btn small" id="copyShare" type="button">Copy address</button>
+          <p class="hint">Use this one, not the page's own link: it starts with <strong>http://</strong> and uses port <strong>8765</strong>, which the Shortcuts app accepts.</p>
         </li>
-        <li>Open the <strong>Shortcuts</strong> app and tap <strong>+</strong>. Rename the shortcut to <strong>LapDrop</strong>.</li>
-        <li>Tap the <strong>i</strong> button and switch on <strong>Show in Share Sheet</strong>.</li>
-        <li>Add the action <strong>Repeat with Each</strong>, and set its input to <strong>Shortcut Input</strong>.</li>
+        <li>Open the <strong>Shortcuts</strong> app, tap <strong>+</strong> and name the shortcut <strong>LapDrop</strong>.</li>
+        <li>Tap the <strong>i</strong> (or the shortcut's name) and switch on <strong>Show in Share Sheet</strong>. Set it to receive <strong>Images, Files and Media</strong> (or Any).</li>
+        <li>Add the action <strong>Repeat with Each</strong>, with <strong>Shortcut Input</strong> as its input.</li>
         <li>Inside the repeat, add <strong>Get Contents of URL</strong> and paste the address.</li>
-        <li>Open that action's options: set <strong>Method</strong> to <strong>POST</strong> and <strong>Request Body</strong> to <strong>Form</strong>.</li>
-        <li>Tap <strong>Add new field</strong>, choose <strong>File</strong>, type <strong>file</strong> as the key and pick <strong>Repeat Item</strong> as the value.</li>
-        <li>Tap <strong>Done</strong>. The first time you use it, allow Shortcuts to reach the local network.</li>
+        <li>Tap the arrow on that action: <strong>Method</strong> = <strong>POST</strong>, <strong>Request Body</strong> = <strong>Form</strong>.</li>
+        <li><strong>Add new field</strong> &rarr; <strong>File</strong>. Key: <strong>file</strong>. Value: <strong>Repeat Item</strong>. No other fields are needed.</li>
+        <li>Tap <strong>Done</strong>. In Photos, tap Share &rarr; <strong>LapDrop</strong>. The first time, allow Shortcuts to use the local network.</li>
       </ol>
-      <p class="hint">LapDrop must be open on the laptop. Tap "New code" there and this address changes too.</p>
+      <p class="hint">If it says it can't connect, the laptop's name may not work on this network. Use the IP address instead (it changes when the network does):</p>
+      <div class="url" id="shareIpUrl"></div>
+      <button class="btn small" id="copyShareIp" type="button">Copy IP address</button>
+      <p class="hint">LapDrop must be open on the laptop. If someone taps "New code" there, these addresses change: paste the new one into the shortcut.</p>
     </details>
   </section>
 </main>
@@ -102,6 +106,10 @@ function render(s) {
   $('#host').textContent = 'Connected to ' + s.host;
   $('#shareUrl').textContent = s.share_url;
   $('#copyShare').onclick = () => copyText(s.share_url);
+  const ipUrl = (s.share_ip_urls || []).find((u) => u.includes('//' + location.hostname + ':')) || (s.share_ip_urls || [])[0] || '';
+  $('#shareIpUrl').textContent = ipUrl;
+  $('#copyShareIp').onclick = () => copyText(ipUrl);
+  $('#copyShareIp').disabled = !ipUrl;
   renderChat($('#chat'), s.notes, 'd:' + me.id);
   const list = $('#outbox');
   list.replaceChildren();

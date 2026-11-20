@@ -16,6 +16,11 @@
   <section class="card" aria-labelledby="h-pair">
     <h2 id="h-pair">Connect a phone</h2>
     <p class="hint">Join the same Wi-Fi as this laptop, then point the phone camera at the code.</p>
+    <div class="alert" id="fwWarn" role="alert" hidden>
+      <strong>Windows Firewall is blocking phones.</strong>
+      <span id="fwText"></span>
+      <button class="btn small" id="fwOpen" type="button">Open firewall settings</button>
+    </div>
     <div class="qr"><img id="qr" alt="QR code that opens LapDrop on your phone"></div>
     <div class="url" id="url"></div>
     <p class="empty" id="noNet" hidden>No network found. Connect this laptop to Wi-Fi.</p>
@@ -38,8 +43,26 @@
       <button class="btn small" id="hotspot" type="button">Open hotspot settings</button>
     </details>
     <details class="more">
-      <summary>Send from the phone's Share menu</summary>
-      <p>Open LapDrop on the phone and follow "Add LapDrop to the Share menu" there. After that, Share &rarr; LapDrop sends straight here, on Wi-Fi or hotspot.</p>
+      <summary>Send from the iPhone's Share menu</summary>
+      <p>One-time setup on the iPhone or iPad. After that, Share &rarr; LapDrop sends photos and files straight here from any app.</p>
+      <ol class="steps">
+        <li>Send this address to the phone (copy it, then paste it in the LapDrop chat; or copy it on the phone's LapDrop page):
+          <div class="url" id="shareUrl"></div>
+          <button class="btn small" id="copyShare" type="button">Copy address</button>
+          <p class="hint">It must start with <strong>http://</strong> and use port <strong>8765</strong>. The QR link (https, 8443) is for the browser only; the Shortcuts app refuses its certificate.</p>
+        </li>
+        <li>On the phone, open <strong>Shortcuts</strong>, tap <strong>+</strong> and name the shortcut <strong>LapDrop</strong>.</li>
+        <li>Tap the <strong>i</strong> (or the shortcut's name) and switch on <strong>Show in Share Sheet</strong>. Set it to receive <strong>Images, Files and Media</strong> (or Any).</li>
+        <li>Add the action <strong>Repeat with Each</strong>, with <strong>Shortcut Input</strong> as its input.</li>
+        <li>Inside the repeat, add <strong>Get Contents of URL</strong> and paste the address.</li>
+        <li>Tap the arrow on that action: <strong>Method</strong> = <strong>POST</strong>, <strong>Request Body</strong> = <strong>Form</strong>.</li>
+        <li><strong>Add new field</strong> &rarr; <strong>File</strong>. Key: <strong>file</strong>. Value: <strong>Repeat Item</strong>. No other fields are needed.</li>
+        <li>Tap <strong>Done</strong>. In Photos, tap Share &rarr; <strong>LapDrop</strong>. The first time, allow Shortcuts to use the local network.</li>
+      </ol>
+      <p class="hint">If the phone says it can't connect, the laptop's name may not resolve on this network: use the IP address instead (changes when the network does):</p>
+      <div class="url" id="shareIpUrl"></div>
+      <button class="btn small" id="copyShareIp" type="button">Copy IP address</button>
+      <p class="hint">LapDrop must be open on the laptop. <strong>New code</strong> changes these addresses: update the shortcut afterwards.</p>
     </details>
   </section>
 
@@ -163,6 +186,18 @@ function render(s) {
   if (chatName !== s.chat_name && !document.querySelector('.name-input')) { chatName = s.chat_name; showName(); }
   $('#startup').checked = s.startup;
   renderMirror(s.mirror);
+  $('#shareUrl').textContent = s.share_url;
+  const ipUrl = (s.share_ip_urls || []).find((u) => currentAddress() && u.includes('//' + currentAddress().ip + ':'))
+    || (s.share_ip_urls || [])[0] || '';
+  $('#shareIpUrl').textContent = ipUrl;
+  $('#copyShareIp').disabled = !ipUrl;
+  const fw = s.firewall || { blocked: [] };
+  $('#fwWarn').hidden = !fw.blocked.length;
+  if (fw.blocked.length) {
+    $('#fwText').textContent = ' This network is ' + fw.blocked.join(' / ') + ', and ' + fw.program
+      + ' is not allowed on ' + (fw.blocked.length > 1 ? 'those' : fw.blocked[0]) + ' networks. In the window that opens, click Change settings, find '
+      + fw.program + ' and tick ' + fw.blocked.join(' and ') + '.';
+  }
 }
 
 function renderMirror(m) {
@@ -194,6 +229,9 @@ $('#newCode').onclick = async () => {
 };
 $('#openFolder').onclick = () => postJson(API + 'open');
 $('#hotspot').onclick = () => postJson(API + 'hotspot-settings');
+$('#fwOpen').onclick = () => postJson(API + 'firewall-settings');
+$('#copyShare').onclick = () => copyText($('#shareUrl').textContent);
+$('#copyShareIp').onclick = () => copyText($('#shareIpUrl').textContent);
 $('#clearNotes').onclick = () => {
   if (confirm('Clear the chat on every device?')) postJson(API + 'clear-notes');
 };
