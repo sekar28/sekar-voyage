@@ -9,6 +9,7 @@ own README.
 |---|---|---|
 | [**Sekar's System Utilities**](SystemUtilities/) | Windows 10/11 PC care: clean up junk, organise folders, check drivers, speed up a slow PC, plus **Jarvis**, an optional assistant that always asks before changing anything | [Download the installer](https://github.com/sekar28/sekar-voyage/releases/latest) · [Install & use](SystemUtilities/README.md) · [User guide](SystemUtilities/docs/HELP.md) |
 | [**Sekar's Dashboard**](Dashboard/) | A voice-controlled AI dashboard for a second monitor: photo frame, music and YouTube, weather, news, markets, cyber-threat briefings, timers, tasks and calendar. Say "Hey Jarvis", or type. Widget Studio builds new widgets from a description | [Download the installer](https://github.com/sekar28/sekar-voyage/releases/tag/dashboard-v1.0.0) · [Install & use](Dashboard/README.md) |
+| [**LapDrop**](LapDrop/) | AirDrop-style file sharing for a Windows laptop: scan a QR code and send files of any size from an iPhone, Android or any browser on the same Wi-Fi. No app on the phone, no cloud. Chat, iPhone Share-menu shortcut, hotspot mode and optional screen mirroring | [Download the installer](https://github.com/sekar28/sekar-voyage/releases/tag/lapdrop-v1.0.0) · [Install & use](LapDrop/README.md) |
 
 The two apps work together: with System Utilities installed, you can ask the Dashboard PC-care questions ("why is
 my PC slow?") and it passes them on. Each also works on its own.
@@ -26,6 +27,9 @@ sekar-voyage/
 │   ├── ui/              the interface, including Widget Studio's sandbox SDK
 │   ├── packaging/       scripts that build and sign the Windows installer
 │   └── tools/           release checks
+├── LapDrop/             LapDrop: phone-to-laptop file sharing over Wi-Fi (Python + HTML/CSS/JS, no shared/ needed)
+│   ├── ui/              the laptop and phone pages
+│   └── packaging/       scripts that build and sign the Windows installer
 ├── docs/                the website (GitHub Pages: https://sekar28.github.io/sekar-voyage/)
 └── shared/
     └── sekar_common/    code shared by my apps: AI providers, key storage (Windows Credential Manager), voice

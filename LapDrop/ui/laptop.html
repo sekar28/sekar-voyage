@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LapDrop</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">LapDrop</div>
+  <div class="sub" id="host"></div>
+</header>
+
+<main class="grid">
+  <section class="card" aria-labelledby="h-pair">
+    <h2 id="h-pair">Connect a phone</h2>
+    <p class="hint">Join the same Wi-Fi as this laptop, then point the phone camera at the code.</p>
+    <div class="qr"><img id="qr" alt="QR code that opens LapDrop on your phone"></div>
+    <div class="url" id="url"></div>
+    <p class="empty" id="noNet" hidden>No network found. Connect this laptop to Wi-Fi.</p>
+    <label class="field" id="ipField">Network
+      <select id="ip"></select>
+    </label>
+    <p class="hint" id="secureHint" hidden>The phone will warn that the connection is not private the first time. That is expected: choose Advanced or Show details, then continue to the site.</p>
+    <label class="check" id="plainField" hidden><input type="checkbox" id="plain"> Use the plain http link instead</label>
+    <div class="row">
+      <button class="btn small" id="copyUrl" type="button">Copy link</button>
+      <button class="btn small" id="newCode" type="button" title="Stops old links from working">New code</button>
+    </div>
+
+    <label class="check"><input type="checkbox" id="startup"> Start LapDrop when Windows starts</label>
+
+    <details class="more">
+      <summary>No Wi-Fi around?</summary>
+      <p><strong>Use the phone's hotspot.</strong> Turn on Personal Hotspot on the phone and connect this laptop to it. The code above updates by itself. Transfers stay between the two devices and do not use mobile data.</p>
+      <p><strong>Or use the laptop's hotspot.</strong> Turn on Mobile hotspot in Windows, join it from the phone, then pick <em>Laptop hotspot</em> under Network. Windows only allows this while the laptop has some connection to share.</p>
+      <button class="btn small" id="hotspot" type="button">Open hotspot settings</button>
+    </details>
+    <details class="more">
+      <summary>Send from the phone's Share menu</summary>
+      <p>Open LapDrop on the phone and follow "Add LapDrop to the Share menu" there. After that, Share &rarr; LapDrop sends straight here, on Wi-Fi or hotspot.</p>
+    </details>
+  </section>
+
+  <div class="stack">
+    <section class="card" aria-labelledby="h-mirror">
+      <div class="card-head">
+        <h2 id="h-mirror">Screen mirroring</h2>
+        <button class="btn small" id="mirrorBtn" type="button">Start</button>
+      </div>
+      <p class="hint" id="mirrorHint"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-recv">
+      <div class="card-head">
+        <h2 id="h-recv">Received</h2>
+        <button class="btn small" id="openFolder" type="button">Open folder</button>
+      </div>
+      <p class="path" id="saveDir"></p>
+      <ul class="list" id="received"></ul>
+    </section>
+
+    <section class="card" aria-labelledby="h-notes">
+      <div class="card-head">
+        <h2 id="h-notes">Chat</h2>
+        <div class="head-actions">
+          <button class="btn small" id="rename" type="button"></button>
+          <button class="btn small" id="clearNotes" type="button">Clear</button>
+        </div>
+      </div>
+      <div class="chat-log" id="chat" role="log" aria-live="polite" tabindex="0"></div>
+      <form class="chat-form" id="chatForm">
+        <textarea id="chatText" rows="1" maxlength="5000" placeholder="Message" aria-label="Message"></textarea>
+        <button class="btn primary" type="submit">Send</button>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="h-out">
+      <h2 id="h-out">Send files to the phone</h2>
+      <div class="drop" id="drop">
+        <span>Drop files here</span>
+        <button class="btn" id="pick" type="button">Choose files</button>
+        <input id="files" type="file" multiple hidden>
+      </div>
+      <ul class="list" id="sending" hidden></ul>
+      <ul class="list" id="outbox"></ul>
+    </section>
+  </div>
+</main>
+
+<script src="/static/common.js"></script>
+<script>
+const API = '/admin/api/';
+let state = null;
+let chosenIp = null;
+try { chosenIp = localStorage.getItem('lapdrop-ip'); } catch (e) { /* ignore */ }
+
+let usePlain = false;
+try { usePlain = localStorage.getItem('lapdrop-plain') === '1'; } catch (e) { /* ignore */ }
+$('#plain').checked = usePlain;
+$('#plain').onchange = (e) => {
+  usePlain = e.target.checked;
+  try { localStorage.setItem('lapdrop-plain', usePlain ? '1' : '0'); } catch (err) { /* ignore */ }
+  renderPairing();
+};
+const linkFor = (addr) => (usePlain ? addr.plain_url : addr.url);
+
+function currentAddress() {
+  const list = state ? state.addresses : [];
+  return list.find((a) => a.ip === chosenIp) || list[0] || null;
+}
+
+function renderPairing() {
+  const list = state.addresses;
+  const select = $('#ip');
+  select.replaceChildren(...list.map((a) => {
+    const opt = el('option', null, a.name ? a.name + ' (' + a.ip + ')' : a.ip);
+    opt.value = a.ip;
+    return opt;
+  }));
+  const addr = currentAddress();
+  $('#noNet').hidden = !!addr;
+  $('.qr').hidden = !addr;
+  $('#ipField').hidden = list.length < 2;
+  $('#copyUrl').disabled = !addr;
+  $('#plainField').hidden = !(addr && addr.secure);
+  $('#secureHint').hidden = !(addr && addr.secure) || usePlain;
+  if (!addr) { $('#url').textContent = ''; return; }
+  select.value = addr.ip;
+  const link = linkFor(addr);
+  $('#url').textContent = link;
+  const src = API + 'qr.svg?ip=' + encodeURIComponent(addr.ip) + (link === addr.plain_url ? '&plain=1' : '')
+    + '&c=' + encodeURIComponent(link.length + link.slice(-12));
+  if ($('#qr').getAttribute('src') !== src) $('#qr').src = src;
+}
+
+function renderFiles(listEl, files, emptyText, actionLabel, action) {
+  listEl.replaceChildren();
+  if (!files.length) { listEl.append(el('li', 'empty', emptyText)); return; }
+  for (const f of files) {
+    const li = el('li');
+    const item = el('div', 'item');
+    item.append(el('div', 'name', f.name), el('div', 'meta', fmtSize(f.size) + ' · ' + fmtTime(f.time)));
+    const btn = el('button', 'btn small', actionLabel);
+    btn.type = 'button';
+    btn.onclick = () => action(f);
+    li.append(item, btn);
+    listEl.append(li);
+  }
+}
+
+function render(s) {
+  state = s;
+  $('#host').textContent = s.host;
+  $('#saveDir').textContent = 'Saved in ' + s.save_dir;
+  renderPairing();
+  renderFiles($('#received'), s.received, 'Files sent from the phone show up here.', 'Show',
+    (f) => postJson(API + 'open', { name: f.name }));
+  renderFiles($('#outbox'), s.outbox, 'Files you add here can be downloaded on the phone.', 'Remove',
+    (f) => postJson(API + 'remove', { name: f.name }));
+  renderChat($('#chat'), s.notes, 'laptop');
+  if (chatName !== s.chat_name && !document.querySelector('.name-input')) { chatName = s.chat_name; showName(); }
+  $('#startup').checked = s.startup;
+  renderMirror(s.mirror);
+}
+
+function renderMirror(m) {
+  const btn = $('#mirrorBtn');
+  btn.hidden = !m.available;
+  btn.textContent = m.running ? 'Stop' : 'Start';
+  btn.classList.toggle('primary', !m.running);
+  btn.onclick = () => postJson(API + 'mirror', { on: !m.running });
+  $('#mirrorHint').textContent = !m.available
+    ? 'Not set up on this laptop yet (needs UxPlay).'
+    : m.running
+      ? 'On. On the iPhone open Control Centre, tap Screen Mirroring and choose ' + m.name
+        + '. The phone screen opens in its own window; Alt+Enter makes it full screen.'
+      : 'Show the iPhone screen in a window on this laptop (AirPlay). Same Wi-Fi or hotspot as for files.';
+}
+
+poll(API + 'state', render);
+
+$('#ip').onchange = (e) => {
+  chosenIp = e.target.value;
+  try { localStorage.setItem('lapdrop-ip', chosenIp); } catch (err) { /* ignore */ }
+  renderPairing();
+};
+$('#copyUrl').onclick = () => { const a = currentAddress(); if (a) copyText(linkFor(a)); };
+$('#newCode').onclick = async () => {
+  if (!confirm('Make a new code? Phones using the old link must scan again.')) return;
+  await postJson(API + 'new-code');
+  toast('New code ready');
+};
+$('#openFolder').onclick = () => postJson(API + 'open');
+$('#hotspot').onclick = () => postJson(API + 'hotspot-settings');
+$('#clearNotes').onclick = () => {
+  if (confirm('Clear the chat on every device?')) postJson(API + 'clear-notes');
+};
+setupChat(API + 'text', () => ({}));
+let chatName = '';
+const showName = setupName($('#rename'), () => chatName, (name) => {
+  chatName = name;
+  postJson(API + 'name', { name });
+});
+$('#startup').onchange = (e) => postJson(API + 'startup', { on: e.target.checked });
+
+const drop = $('#drop');
+const addFiles = (files) => uploadAll(files, API + 'upload', $('#sending'));
+$('#pick').onclick = () => $('#files').click();
+$('#files').onchange = (e) => { addFiles(e.target.files); e.target.value = ''; };
+['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', (e) => addFiles(e.dataTransfer.files));
+// Dropping a file outside the box should not navigate away from the app.
+['dragover', 'drop'].forEach((t) => window.addEventListener(t, (e) => e.preventDefault()));
+</script>
+</body>
+</html>

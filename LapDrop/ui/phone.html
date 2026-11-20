@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b7a5c">
+<title>LapDrop</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="phone" id="app">
+  <header class="top">
+    <div class="brand">LapDrop</div>
+    <div class="sub" id="host">Connecting…</div>
+  </header>
+
+  <section class="card" aria-labelledby="h-send">
+    <h2 id="h-send">Send to the laptop</h2>
+    <p class="hint">Photos, videos, documents. Any size, several at once.</p>
+    <div class="row">
+      <button class="btn primary big" id="pick" type="button">Choose files</button>
+      <input id="files" type="file" multiple hidden>
+    </div>
+    <ul class="list" id="sending" hidden></ul>
+  </section>
+
+  <section class="card" aria-labelledby="h-notes">
+    <div class="card-head">
+      <h2 id="h-notes">Chat</h2>
+      <button class="btn small" id="rename" type="button"></button>
+    </div>
+    <div class="chat-log" id="chat" role="log" aria-live="polite" tabindex="0"></div>
+    <form class="chat-form" id="chatForm">
+      <textarea id="chatText" rows="1" maxlength="5000" placeholder="Message" aria-label="Message"></textarea>
+      <button class="btn primary" type="submit">Send</button>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="h-get">
+    <h2 id="h-get">From the laptop</h2>
+    <ul class="list" id="outbox"></ul>
+  </section>
+
+  <section class="card" aria-labelledby="h-share">
+    <h2 id="h-share">Add LapDrop to the Share menu</h2>
+    <p class="hint">One-time setup on iPhone or iPad. Afterwards: Share &rarr; LapDrop from Photos, Files or any app.</p>
+    <details class="more">
+      <summary>Show the steps</summary>
+      <ol class="steps">
+        <li>Copy this address:
+          <div class="url" id="shareUrl"></div>
+          <button class="btn small" id="copyShare" type="button">Copy address</button>
+        </li>
+        <li>Open the <strong>Shortcuts</strong> app and tap <strong>+</strong>. Rename the shortcut to <strong>LapDrop</strong>.</li>
+        <li>Tap the <strong>i</strong> button and switch on <strong>Show in Share Sheet</strong>.</li>
+        <li>Add the action <strong>Repeat with Each</strong>, and set its input to <strong>Shortcut Input</strong>.</li>
+        <li>Inside the repeat, add <strong>Get Contents of URL</strong> and paste the address.</li>
+        <li>Open that action's options: set <strong>Method</strong> to <strong>POST</strong> and <strong>Request Body</strong> to <strong>Form</strong>.</li>
+        <li>Tap <strong>Add new field</strong>, choose <strong>File</strong>, type <strong>file</strong> as the key and pick <strong>Repeat Item</strong> as the value.</li>
+        <li>Tap <strong>Done</strong>. The first time you use it, allow Shortcuts to reach the local network.</li>
+      </ol>
+      <p class="hint">LapDrop must be open on the laptop. Tap "New code" there and this address changes too.</p>
+    </details>
+  </section>
+</main>
+
+<main class="notice" id="gone" hidden>
+  <h1>Link not valid</h1>
+  <p>Scan the QR code on the laptop again to reconnect.</p>
+</main>
+
+<script src="/static/common.js"></script>
+<script>
+const API = 'api/';
+
+// Who this device is in the chat: a random id (so it can spot its own messages)
+// and a name people see. Both are remembered on this device only.
+function guessName() {
+  const ua = navigator.userAgent;
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua)) return 'iPad';
+  if (/Android/.test(ua)) return 'Android';
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Windows/.test(ua)) return 'Windows PC';
+  return 'Device';
+}
+const me = { id: '', name: guessName() };
+try {
+  me.id = localStorage.getItem('lapdrop-id') || '';
+  me.name = localStorage.getItem('lapdrop-name') || me.name;
+} catch (e) { /* private mode: fall through */ }
+if (!me.id) {
+  me.id = Math.random().toString(36).slice(2, 12);
+  try { localStorage.setItem('lapdrop-id', me.id); } catch (e) { /* ignore */ }
+}
+setupName($('#rename'), () => me.name, (name) => {
+  me.name = name;
+  try { localStorage.setItem('lapdrop-name', name); } catch (e) { /* ignore */ }
+});
+
+function render(s) {
+  $('#host').textContent = 'Connected to ' + s.host;
+  $('#shareUrl').textContent = s.share_url;
+  $('#copyShare').onclick = () => copyText(s.share_url);
+  renderChat($('#chat'), s.notes, 'd:' + me.id);
+  const list = $('#outbox');
+  list.replaceChildren();
+  if (!s.outbox.length) {
+    list.append(el('li', 'empty', 'Files added on the laptop show up here.'));
+    return;
+  }
+  for (const f of s.outbox) {
+    const li = el('li');
+    const item = el('div', 'item');
+    item.append(el('div', 'name', f.name), el('div', 'meta', fmtSize(f.size) + ' · ' + fmtTime(f.time)));
+    const a = el('a', 'btn small', 'Download');
+    a.href = API + 'file?name=' + encodeURIComponent(f.name);
+    a.setAttribute('download', f.name);
+    li.append(item, a);
+    list.append(li);
+  }
+}
+
+poll(API + 'state', render, () => { $('#app').hidden = true; $('#gone').hidden = false; });
+
+$('#pick').onclick = () => $('#files').click();
+$('#files').onchange = (e) => {
+  uploadAll(e.target.files, API + 'upload', $('#sending'));
+  e.target.value = '';
+};
+
+setupChat(API + 'text', () => ({ id: me.id, name: me.name }));
+</script>
+</body>
+</html>

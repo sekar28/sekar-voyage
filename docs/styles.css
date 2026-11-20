@@ -2878,3 +2878,21 @@ html {
   .net-diagram .nd-pi-title { font-size: 21px; }
   .net-diagram .nd-sub, .net-diagram .nd-label, .net-diagram .nd-note, .net-diagram .nd-pi-sub, .net-diagram .nd-chip-t { font-size: 17.5px; }
 }
+/* ------------------------------------------------------------------
+   LapDrop story: amber accent (the iPhone shortcut's colour), video figure
+   ------------------------------------------------------------------ */
+[data-project="lapdrop"] {
+  --pa: #e0662f;
+  --pb: #ffb38a;
+  --pd: #9a3d12;
+  --pbtn: #b34a19;
+  --pink: light-dark(#a8461a, #ffb38a);
+  --ptint: light-dark(#fdeee5, #3a2014);
+  --ptag: #9a3d12;
+}
+
+.video-figure { max-width: 520px; margin-inline: auto; }
+.video-figure video {
+  display: block; width: 100%; height: auto; aspect-ratio: 4 / 5;
+  border-radius: var(--radius); background: #071a33; box-shadow: var(--shadow-sm);
+}

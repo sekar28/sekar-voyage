@@ -1,0 +1,3 @@
+segno>=1.6      # QR code
+cryptography    # optional: https link for phones in "HTTPS only" mode
+pywebview>=5    # optional: app window (falls back to the browser without it)
