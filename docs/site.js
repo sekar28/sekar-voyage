@@ -314,6 +314,28 @@
     }, { passive: true });
   });
 
+  /* Visit counter (GoatCounter: no cookies, no personal data). Set GC_CODE to your GoatCounter site code to switch it on.
+     The footer line stays hidden if the code is empty, the request is blocked, or the visitor is offline. */
+  const GC_CODE = 'sekarvoyage';
+  const note = document.querySelector('.visit-note');
+  if (GC_CODE && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    const gc = document.createElement('script');
+    gc.async = true;
+    gc.src = 'https://gc.zgo.at/count.js';
+    gc.dataset.goatcounter = `https://${GC_CODE}.goatcounter.com/count`;
+    document.head.appendChild(gc);
+    if (note) {
+      const base = `https://${GC_CODE}.goatcounter.com/counter/`;
+      const get = (p) => fetch(base + p + '.json').then((r) => (r.ok ? r.json() : Promise.reject())).then((j) => j.count);
+      const show = () => Promise.all([get(location.pathname.replace(/\/index\.html$/, '/')), get('TOTAL')]).then(([page, all]) => {
+        note.querySelector('[data-page]').textContent = page;
+        note.querySelector('[data-all]').textContent = all;
+        note.hidden = false;
+      }).catch(() => {});
+      setTimeout(show, 1500);           /* give the page's own hit a moment to register first */
+    }
+  }
+
   /* Reveal on scroll, staggered within each parent */
   const items = document.querySelectorAll('[data-reveal]');
   if (!('IntersectionObserver' in window)) { items.forEach((el) => el.classList.add('in')); return; }

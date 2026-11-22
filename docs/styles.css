@@ -2896,3 +2896,7 @@ html {
   display: block; width: 100%; height: auto; aspect-ratio: 4 / 5;
   border-radius: var(--radius); background: #071a33; box-shadow: var(--shadow-sm);
 }
+
+/* Visit counter line in the footer (shown by site.js only when a count is available) */
+.visit-note { flex-basis: 100%; margin: 0; font-size: 0.82rem; opacity: 0.75; }
+.visit-note[hidden] { display: none; }
