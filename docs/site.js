@@ -326,7 +326,7 @@
     document.head.appendChild(gc);
     if (note) {
       const base = `https://${GC_CODE}.goatcounter.com/counter/`;
-      const get = (p) => fetch(base + p + '.json').then((r) => (r.ok ? r.json() : Promise.reject())).then((j) => j.count);
+      const get = (p) => fetch(base + p + '.json').then((r) => r.json()).then((j) => j.count);   /* a page with no hits yet answers 404 with a count of 0 */
       const show = () => Promise.all([get(location.pathname.replace(/\/index\.html$/, '/')), get('TOTAL')]).then(([page, all]) => {
         note.querySelector('[data-page]').textContent = page;
         note.querySelector('[data-all]').textContent = all;
